@@ -1,0 +1,16 @@
+# Node modules
+node_modules/
+
+# Build
+dist/
+
+# Logs
+*.log
+
+# Sistema
+.DS_Store
+Thumbs.db
+
+# IDEs
+.vscode/
+.idea/
