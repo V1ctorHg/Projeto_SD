@@ -1,0 +1,5 @@
+[
+    {"number": 1, "name": "Candidato A", "party": "Partido X"},
+    {"number": 2, "name": "Candidato B", "party": "Partido Y"},
+    {"number": 3, "name": "Candidato C", "party": "Partido Z"}
+]

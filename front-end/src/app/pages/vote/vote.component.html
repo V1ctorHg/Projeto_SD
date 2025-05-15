@@ -1,0 +1,14 @@
+<h2>Vote em um Candidato</h2>
+
+<div *ngIf="candidates.length === 0">
+  Carregando candidatos...
+</div>
+
+<div *ngFor="let candidate of candidates">
+  <div>
+    <strong>{{ candidate.name }} ({{ candidate.party }})</strong>
+    <button (click)="vote(candidate.number)">Votar</button>
+  </div>
+</div>
+
+<p *ngIf="message">{{ message }}</p>

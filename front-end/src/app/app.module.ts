@@ -1,21 +1,23 @@
-import { NgModule } from '@angular/core';
 import { BrowserModule } from '@angular/platform-browser';
+import { NgModule } from '@angular/core';
+import { AppRoutingModule } from './app-routing.module';
 import { FormsModule } from '@angular/forms';
-import { HttpClientModule } from '@angular/common/http';
-
 import { AppComponent } from './app.component';
+import { VoteComponent } from './pages/vote/vote.component';
+import { ResultsComponent } from './pages/results/results.component';
 
 @NgModule({
   declarations: [
-    AppComponent
-    // Adicione outros componentes aqui depois
+    AppComponent,
+    VoteComponent,
+    ResultsComponent
   ],
   imports: [
     BrowserModule,
     FormsModule,
-    HttpClientModule
+    AppRoutingModule
   ],
   providers: [],
   bootstrap: [AppComponent]
 })
-export class AppModule { }
+export class AppModule {}

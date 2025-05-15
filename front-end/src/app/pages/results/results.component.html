@@ -1,0 +1,49 @@
+<div class="results-container">
+  <h2>Resultados da Votação</h2>
+  
+  <div *ngIf="loading" class="loading">
+    Carregando resultados...
+  </div>
+
+  <div *ngIf="error" class="error">
+    {{ error }}
+  </div>
+
+  <div *ngIf="!loading && !error">
+    <div *ngIf="Object.keys(results).length === 0" class="no-results">
+      Nenhum resultado disponível no momento.
+    </div>
+
+    <div class="results-grid">
+      <div *ngFor="let entry of sortedResults()" class="result-card">
+        <div class="candidate-header">
+          <h3>{{ entry.name }}</h3>
+          <div class="candidate-details">
+            <div class="number">Número: {{ entry.number }}</div>
+            <div class="party">{{ entry.party }}</div>
+          </div>
+        </div>
+
+        <div class="vote-details">
+          <div class="vote-count">
+            <span class="votes">{{ entry.votes }}</span>
+            <span class="votes-label">votos</span>
+          </div>
+          
+          <div class="percentage-bar">
+            <div class="percentage">{{ calculatePercentage(entry.votes) }}%</div>
+            <div class="progress-bar">
+              <div class="progress" [style.width.%]="calculatePercentage(entry.votes)"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="total-section">
+      <div class="total-votes">
+        Total de Votos: <strong>{{ calculateTotalVotes() }}</strong>
+      </div>
+    </div>
+  </div>
+</div>
