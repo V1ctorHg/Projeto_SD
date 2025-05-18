@@ -20,8 +20,15 @@ interface Results {
   [key: string]: CandidateResult;
 }
 
+interface CreateElection {
+  message: string;
+}
+
 @Injectable({ providedIn: 'root' })
 export class ApiService {
+  createElection(population: number, votes: number) {
+    throw new Error('Method not implemented.');
+  }
   private baseUrl = 'http://localhost:5000'; // Porta do app.py
 
   constructor(private http: HttpClient) {}
@@ -37,7 +44,13 @@ export class ApiService {
   getResults(): Observable<Results> {
     return this.http.get<Results>(`${this.baseUrl}/results`);
   }
+
+  getElectionAlternative(population: number, votes: number) {
+    return this.http.post<CreateElection>(`${this.baseUrl}/electionalternative`, { population, votes });
+  }
 }
+
+
 
 
 /*

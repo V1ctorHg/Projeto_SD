@@ -1,12 +1,19 @@
 from flask import Flask, jsonify, request
+from flask_cors import CORS # type: ignore
 import json
 import os
+import time
+import numpy as np
+from eleicoesalternativo import eleicao
 
 app = Flask(__name__)
+CORS(app)
 
 DATA_PATH = os.path.join(os.path.dirname(__file__), "Data")
 CANDIDATES_FILE = os.path.join(DATA_PATH, "candidates.json")
 VOTES_FILE = os.path.join(DATA_PATH, "votes.json")
+
+ELECTION_FILE = os.path.join(DATA_PATH, "election.json")
 
 def load_data(file_path):
     try:
@@ -19,6 +26,8 @@ def load_data(file_path):
 def save_data(file_path, data):
     with open(file_path, "w") as file:
         json.dump(data, file, indent=4)
+    
+    return True
 
 @app.route('/candidates', methods=['GET'])
 def get_candidates():
@@ -95,6 +104,34 @@ def get_results():
     except Exception as e:
         print(f"Erro ao processar resultados: {e}")
         return jsonify({"error": str(e)}), 500
+
+
+
+#Para o alternativo
+@app.route('/electionalternative', methods =['POST', 'GET'])
+def electionalternative():
+    if request.method == 'POST':
+        if not request.is_json:
+            return jsonify({"error": "A requisição deve ser JSON"}), 400
+
+        json_para_salvar = request.json # O JSON enviado pelo cliente Angular
+        print(f"Recebido JSON do cliente para salvar: {json_para_salvar}")
+
+        if save_data(ELECTION_FILE, json_para_salvar):
+            print(f"Dados da eleição recebidos e salvos pelo servidor!")
+            return jsonify({"message": "Dados da eleição recebidos e salvos pelo servidor!"}), 200
+        else:
+            print(f"Servidor falhou ao salvar os dados da eleição.")
+            return jsonify({"error": "Servidor falhou ao salvar os dados da eleição."}), 500
+    elif request.method == 'GET':
+        try:
+            with open(ELECTION_FILE, "r") as file:
+                election_data = json.load(file)
+                return jsonify(election_data)
+        except FileNotFoundError:
+            return jsonify({"error": "Nenhuma eleição em andamento"}), 404
+        except Exception as e:
+            return jsonify({"error": str(e)}), 500
 
 if __name__ == "__main__":
     os.makedirs(DATA_PATH, exist_ok=True)

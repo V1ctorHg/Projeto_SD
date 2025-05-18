@@ -1,0 +1,156 @@
+<div class="election-alternative-container">
+  <h2>Inicie a votação</h2>
+
+  <p>Insira as informações abaixo para iniciar a votação</p>
+  
+  <form (ngSubmit)="startElection()">
+    <div class="form-group">
+      <label for="populacao_total">Numero total de população</label>
+      <input type="number" 
+             id="populacao_total"
+             name="populacao_total"
+             [(ngModel)]="populacao_total"
+             min="1">
+    </div>
+
+    <div class="form-group">
+      <label for="num_cidades">Quantidade de cidades</label>
+      <input type="number"
+             id="num_cidades"
+             name="num_cidades"
+             [(ngModel)]="num_cidades"
+             min="1">
+    </div>
+
+    <div class="form-group">
+      <label for="partidos" class="mb-2">
+        <strong>Selecione os partidos para a simulação (dois ou mais, separados por vírgula):</strong>
+      </label>
+      <input type="text"
+             id="partidos"
+             name="partidos"
+             [(ngModel)]="partidos"
+             class="form-control"
+             placeholder="Ex: Partido A, Partido B, Partido C">
+    </div>
+
+    <button type="submit"
+            class="submit-button">
+      Iniciar votação
+    </button>
+  </form>
+
+  <div *ngIf="message" class="{{message.includes('sucesso') ? 'success' : 'error'}}">
+    {{ message }}
+  </div>
+
+  <!-- Debug info -->
+  <div style="margin: 20px 0; padding: 10px; background: #f5f5f5; border-radius: 4px;">
+    <p><strong>Status do Observable:</strong></p>
+    <ng-container *ngIf="electionResults$ | async as results; else loading">
+      <p style="color: green;">Dados disponíveis!</p>
+    </ng-container>
+    <ng-template #loading>
+      <p style="color: orange;">Aguardando dados da eleição...</p>
+    </ng-template>
+  </div>
+
+  <!-- Resultados da eleição -->
+  <ng-container *ngIf="electionResults$ | async as results">
+    <div class="election-results-container">
+      <header class="results-header">
+        <h2>{{ results.ativaeleicao ? '-------- RESULTADO PARCIAL --------' : '-------- RESULTADO FINAL --------' }}</h2>
+      </header>
+
+      <!-- Gráficos -->
+      <div class="charts-container" *ngIf="isBrowser">
+        <!-- Gráfico de meia lua para votos por partido -->
+        <div class="chart-section" *ngIf="hasVotosPartido(results)">
+          <h3>Distribuição de Votos por Partido</h3>
+          <div class="chart-wrapper">
+            <canvas baseChart
+                   [type]="'doughnut'"
+                   [datasets]="doughnutChartData.datasets"
+                   [labels]="doughnutChartData.labels"
+                   [options]="doughnutChartOptions">
+            </canvas>
+          </div>
+        </div>
+
+        <!-- Gráfico de barras para total de votos e abstenção -->
+        <div class="chart-section" *ngIf="results.totalpopulacao > 0">
+          <h3>Total de Votos e Abstenção</h3>
+          <div class="chart-wrapper">
+            <canvas baseChart
+                   [type]="'bar'"
+                   [datasets]="barChartData.datasets"
+                   [labels]="barChartData.labels"
+                   [options]="barChartOptions">
+            </canvas>
+          </div>
+        </div>
+      </div>
+
+      <section class="results-summary">
+        <p><strong>Serial da Eleição:</strong> {{ results.serialeleicao | number:'1.0-0' }}</p>
+        <p><strong>Total de Votos Computados:</strong> {{ results.totalvotos | number }}</p>
+        <p><strong>Total de Eleitores (Aptos na Simulação):</strong> {{ results.totalpopulacao | number }}</p>
+      </section>
+
+      <section class="party-votes">
+        <h3>Votos por Partido:</h3>
+        <ul class="party-list">
+          <li *ngFor="let partido of getVotosArray(results)" class="party-item">
+            <span class="party-name">{{ partido.nome }}:</span>
+            <span class="party-vote-count">{{ partido.votos | number }}</span>
+            <span class="party-percentage" *ngIf="results.totalvotos > 0">
+              ({{ (partido.votos / results.totalvotos) | percent:'1.2-2' }})
+            </span>
+          </li>
+        </ul>
+      </section>
+
+      <section *ngIf="results.ativaeleicao" class="partial-info">
+        <hr>
+        <p class="status-message"><strong>Status:</strong> {{ getDefinicaoMatematica(results).mensagem }}</p>
+      </section>
+
+      <section class="abstention-info">
+        <hr>
+        <p><strong>Abstenção:</strong> {{ getAbstencao(results) | number }}</p>
+        <p><strong>Taxa de Abstenção:</strong> 
+          {{ getAbstencao(results) / results.totalpopulacao | percent:'1.2-2' }}
+        </p>
+      </section>
+
+      <section *ngIf="!results.ativaeleicao" class="final-info">
+        <hr>
+        <h3 class="winner-title">Resultado Consolidado:</h3>
+        <p *ngIf="getPartidoVencedor(results)" class="winner-details">
+          <strong>Partido Vencedor:</strong> 
+          <span class="winner-name">{{ getPartidoVencedor(results) }}</span>
+        </p>
+        <p *ngIf="getPartidoVencedor(results)" class="winner-percentage">
+          <strong>Porcentagem do Vencedor:</strong> 
+          {{ getPorcentagemVencedor(results) | percent:'1.2-2' }}
+        </p>
+        <p *ngIf="!getPartidoVencedor(results) && results.totalvotos > 0" class="tie-message">
+          Não foi possível determinar um vencedor único ou ocorreu empate.
+        </p>
+        <p *ngIf="results.totalvotos === 0" class="no-votes-message">
+          Nenhum voto foi computado nesta eleição.
+        </p>
+      </section>
+
+      <footer class="results-footer" *ngIf="!results.ativaeleicao">
+        --------------------------------
+      </footer>
+    </div>
+  </ng-container>
+
+  <!-- Debug info -->
+  <div style="margin-top: 20px; padding: 10px; background: #f5f5f5; border-radius: 4px;">
+    <p><strong>Dados brutos do Observable:</strong></p>
+    <pre style="overflow: auto; max-height: 200px;">{{ electionResults$ | async | json }}</pre>
+  </div>
+</div>
