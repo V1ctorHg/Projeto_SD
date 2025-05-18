@@ -85,17 +85,16 @@ def enviar_resultados(resultados):
     """
     eleicaoativa = True
     quantidade_cidades = len(resultados)
-    atual = 1
 
     totalpopulacao = 0
     totalvotos = 0
     votos_por_partido = {}
+    serialdaeleicao = None
     i = 0
 
     for cidade in resultados:
     
         jsonparcial = {
-            "serialeleicao": cidade["serialeleicao"],
             "total_populacao": cidade["populacao"],
             "total_votos": cidade["total_votos"],
             "votos_por_partido": cidade["votos_por_partido"],
@@ -110,15 +109,17 @@ def enviar_resultados(resultados):
         ativaeleicao = jsonparcial["eleicaoativa"]
         if totalpopulacao == cidade["totalpossiveiseleitores"]:
             ativaeleicao = False
-        serialdaeleicao = jsonparcial["serialeleicao"]
+       
 
         json_eleicao = {
+            "electionpart": i,
             "serialeleicao": serialdaeleicao,
             "totalpopulacao": totalpopulacao,
             "totalvotos": totalvotos,
             "votos_por_partido": votos_por_partido,
             "ativaeleicao": ativaeleicao,
-            "totalpossiveiseleitores": cidade["totalpossiveiseleitores"]
+            "totalpossiveiseleitores": cidade["totalpossiveiseleitores"],
+            #depois colocar aqui o usuário que solicitou a eleição e o timestamp
         }
 
          # Envia este JSON para o servidor Flask
@@ -127,6 +128,7 @@ def enviar_resultados(resultados):
             resposta_servidor = requests.post(core, json=json_eleicao, timeout=10)
             resposta_servidor.raise_for_status() # Verifica se houve erro HTTP (4xx ou 5xx)
             print(f"CLIENTE: Iteração {i}: JSON enviado. Servidor respondeu: {resposta_servidor.json().get('message')}")
+            serialdaeleicao = resposta_servidor.json().get('serialeleicao')
         except requests.exceptions.RequestException as e:
             print(f"CLIENTE: Iteração {i}: Falha ao enviar JSON para o servidor. Erro: {e}")
 

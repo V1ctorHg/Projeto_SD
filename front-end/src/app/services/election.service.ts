@@ -3,6 +3,8 @@ import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { BehaviorSubject, Observable, timer, Observer, of } from 'rxjs';
 import { switchMap, catchError, retry, tap, map } from 'rxjs/operators';
 
+//depois colocar aqui o usuário que solicitou a eleição e o timestamp
+
 export interface ElectionResults {
   serialeleicao: number;
   totalpopulacao: number;

@@ -177,7 +177,6 @@ class eleicao:
                 - porcentagem_vencedor: Porcentagem do vencedor
                 - votos_por_partido: Dicionário com votos de cada partido
         """
-        serialeleicao = uniform(0,2000)
         def divide_populacao(populacao_total, num_cidades):
             # Garantir que temos população suficiente para todas as cidades
             if populacao_total < num_cidades:
@@ -267,7 +266,6 @@ class eleicao:
                 votos_partidos_cidade = {partido: int(votos) for partido, votos in zip(partidos, votos_cidade)}
                 
                 resultados_cidades.append({
-                    'serialeleicao': serialeleicao,
                     'nome': cidade_atual,
                     'populacao': pop,
                     'total_votos': int(total_votos_cidade),

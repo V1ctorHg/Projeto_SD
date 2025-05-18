@@ -12,6 +12,7 @@ CORS(app)
 DATA_PATH = os.path.join(os.path.dirname(__file__), "Data")
 CANDIDATES_FILE = os.path.join(DATA_PATH, "candidates.json")
 VOTES_FILE = os.path.join(DATA_PATH, "votes.json")
+SERIAL_VOTES_FILE = os.path.join(DATA_PATH, "serial_votes.json")
 
 ELECTION_FILE = os.path.join(DATA_PATH, "election.json")
 
@@ -110,6 +111,9 @@ def get_results():
 #Para o alternativo
 @app.route('/electionalternative', methods =['POST', 'GET'])
 def electionalternative():
+    if not os.path.exists(SERIAL_VOTES_FILE):
+        save_data(SERIAL_VOTES_FILE, {"serial": 0})
+
     if request.method == 'POST':
         if not request.is_json:
             return jsonify({"error": "A requisição deve ser JSON"}), 400
@@ -117,9 +121,26 @@ def electionalternative():
         json_para_salvar = request.json # O JSON enviado pelo cliente Angular
         print(f"Recebido JSON do cliente para salvar: {json_para_salvar}")
 
+
+       
+
+        part = json_para_salvar.get("electionpart")
+        if part == 0:
+            with open(SERIAL_VOTES_FILE, "r") as file:
+                serial = json.load(file)
+                serial_eleicao = serial.get("serial")
+
+            json_para_salvar["serialeleicao"] = serial_eleicao
+            
+            novo_serial = serial_eleicao + 1
+            save_data(SERIAL_VOTES_FILE, {"serial": novo_serial})
+        else:
+            serial_eleicao = json_para_salvar.get("serialeleicao")
+        
+        
         if save_data(ELECTION_FILE, json_para_salvar):
             print(f"Dados da eleição recebidos e salvos pelo servidor!")
-            return jsonify({"message": "Dados da eleição recebidos e salvos pelo servidor!"}), 200
+            return jsonify({"message": "Dados da eleição recebidos e salvos pelo servidor!", "serialeleicao": serial_eleicao}), 200
         else:
             print(f"Servidor falhou ao salvar os dados da eleição.")
             return jsonify({"error": "Servidor falhou ao salvar os dados da eleição."}), 500
