@@ -81,7 +81,7 @@
 }
 
 .results-header {
-  background-color: #343a40; /* Cor escura, "Louis Approved" pode gostar de algo mais minimalista ou com um toque de cor específico */
+  background-color: #343a40; /*Cor escura */
   color: #fff;
   padding: 1rem 1.5rem;
   border-top-left-radius: calc(0.5rem - 1px);
@@ -141,7 +141,7 @@
 }
 
 .party-vote-count {
-  color: #007bff; /* Destaque para contagem de votos */
+  color: hsl(211, 100%, 50%); /* Destaque para contagem de votos */
   font-weight: bold;
 }
 
