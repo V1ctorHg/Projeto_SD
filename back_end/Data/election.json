@@ -1,12 +1,12 @@
 {
-    "electionpart": 24,
-    "serialeleicao": 5,
-    "totalpopulacao": 150000,
-    "totalvotos": 103577,
+    "electionpart": 14,
+    "serialeleicao": 6,
+    "totalpopulacao": 1000000,
+    "totalvotos": 699354,
     "votos_por_partido": {
-        "Partido A": 50805,
-        "Partido B": 52772
+        "Partido A": 326303,
+        "Partido B": 373051
     },
     "ativaeleicao": false,
-    "totalpossiveiseleitores": 150000
+    "totalpossiveiseleitores": 1000000
 }
