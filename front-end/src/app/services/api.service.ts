@@ -17,7 +17,8 @@ interface CandidateResult extends Candidate {
 }
 
 interface Results {
-  [key: string]: CandidateResult;
+  [key: string]: CandidateResult | boolean;
+  eleicaoativa: boolean;
 }
 
 interface CreateElection {
@@ -26,10 +27,7 @@ interface CreateElection {
 
 @Injectable({ providedIn: 'root' })
 export class ApiService {
-  createElection(population: number, votes: number) {
-    throw new Error('Method not implemented.');
-  }
-  private baseUrl = 'http://localhost:5000'; // Porta do app.py
+  private baseUrl = 'http://localhost:5000';
 
   constructor(private http: HttpClient) {}
 
@@ -49,33 +47,3 @@ export class ApiService {
     return this.http.post<CreateElection>(`${this.baseUrl}/electionalternative`, { population, votes });
   }
 }
-
-
-
-
-/*
-import { Injectable } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
-import { Observable } from 'rxjs';
-
-@Injectable({
-  providedIn: 'root'
-})
-export class ApiService {
-  private baseUrl = 'http://127.0.0.1:5000';
-
-  constructor(private http: HttpClient) {}
-
-  getCandidates(): Observable<any> {
-    return this.http.get(`${this.baseUrl}/candidates`);
-  }
-
-  vote(cpf: string, number: number): Observable<any> {
-    return this.http.post(`${this.baseUrl}/vote`, { cpf, number });
-  }
-
-  getResults(): Observable<any> {
-    return this.http.get(`${this.baseUrl}/results`);
-  }
-}
-  */

@@ -73,86 +73,77 @@ def register_vote():
 @app.route('/results', methods=['GET'])
 def get_results():
     try:
-        # Carregar dados
+        # Carregar dados principais
         votes = load_data(VOTES_FILE)
         candidates = load_data(CANDIDATES_FILE)
+        election_data = load_data(ELECTION_FILE)
+
+        #O que estava aqui agora esta no cliente
         
-        print("\n=== DEBUG RESULTADOS ===")
-        print(f"Votos carregados: {votes}")
-        print(f"Candidatos carregados: {candidates}")
-        
-        # Inicializar resultados com informações dos candidatos
-        results = {}
-        for candidate in candidates:
-            candidate_number = str(candidate["number"])
-            results[candidate_number] = {
-                "name": candidate["name"],
-                "number": candidate["number"],
-                "party": candidate["party"],
-                "votes": 0
-            }
-        
-        # Contar votos
-        for vote in votes:
-            candidate_number = str(vote["number"])
-            if candidate_number in results:
-                results[candidate_number]["votes"] += 1
-        
-        print(f"Resultados finais: {results}")
-        print("=== FIM DEBUG ===\n")
-        
-        return jsonify(results)
+        data ={"votes": votes, "candidates": candidates, "election_data": election_data}
+
+        return jsonify(data)
+
     except Exception as e:
         print(f"Erro ao processar resultados: {e}")
         return jsonify({"error": str(e)}), 500
 
 
-
 #Para o alternativo
-@app.route('/electionalternative', methods =['POST', 'GET'])
+@app.route('/electionalternative', methods=['POST'])
 def electionalternative():
-    if not os.path.exists(SERIAL_VOTES_FILE):
-        save_data(SERIAL_VOTES_FILE, {"serial": 0})
+    if not request.is_json:
+        return jsonify({"error": "A requisição deve ser JSON"}), 400
 
-    if request.method == 'POST':
-        if not request.is_json:
-            return jsonify({"error": "A requisição deve ser JSON"}), 400
+    json_para_salvar = request.json
+    print(f"Recebido JSON do cliente para salvar: {json_para_salvar}")
 
-        json_para_salvar = request.json # O JSON enviado pelo cliente Angular
-        print(f"Recebido JSON do cliente para salvar: {json_para_salvar}")
+    part = json_para_salvar.get("electionpart")
+    if part is None:
+        return jsonify({"error": "Faltando electionpart no JSON"}), 400
 
-
-       
-
-        part = json_para_salvar.get("electionpart")
-        if part == 0:
+    # Gera ou recupera o serial da eleição
+    if part == 0:
+        try:
             with open(SERIAL_VOTES_FILE, "r") as file:
                 serial = json.load(file)
-                serial_eleicao = serial.get("serial")
-
-            json_para_salvar["serialeleicao"] = serial_eleicao
-            
-            novo_serial = serial_eleicao + 1
-            save_data(SERIAL_VOTES_FILE, {"serial": novo_serial})
-        else:
-            serial_eleicao = json_para_salvar.get("serialeleicao")
-        
-        
-        if save_data(ELECTION_FILE, json_para_salvar):
-            print(f"Dados da eleição recebidos e salvos pelo servidor!")
-            return jsonify({"message": "Dados da eleição recebidos e salvos pelo servidor!", "serialeleicao": serial_eleicao}), 200
-        else:
-            print(f"Servidor falhou ao salvar os dados da eleição.")
-            return jsonify({"error": "Servidor falhou ao salvar os dados da eleição."}), 500
-    elif request.method == 'GET':
-        try:
-            with open(ELECTION_FILE, "r") as file:
-                election_data = json.load(file)
-                return jsonify(election_data)
+                serial_eleicao = serial.get("serial", 0)
         except FileNotFoundError:
-            return jsonify({"error": "Nenhuma eleição em andamento"}), 404
-        except Exception as e:
-            return jsonify({"error": str(e)}), 500
+            serial_eleicao = 0
+
+        json_para_salvar["serialeleicao"] = serial_eleicao
+        novo_serial = serial_eleicao + 1
+        save_data(SERIAL_VOTES_FILE, {"serial": novo_serial})
+    else:
+        serial_eleicao = json_para_salvar.get("serialeleicao")
+
+    # Carrega todas as eleições
+    try:
+        with open(ELECTION_FILE, "r") as file:
+            dados_eleicoes = json.load(file)
+    except FileNotFoundError:
+        dados_eleicoes = {}
+
+    # Salva ou sobrescreve toda a eleição correspondente
+    serial_str = str(serial_eleicao)
+    dados_eleicoes[serial_str] = {
+        "serialeleicao": serial_eleicao,
+        "electionpart": part,
+        "totalpopulacao": json_para_salvar.get("totalpopulacao"),
+        "totalvotos": json_para_salvar.get("totalvotos"),
+        "votos_por_partido": json_para_salvar.get("votos_por_partido", {}),
+        "ativaeleicao": json_para_salvar.get("ativaeleicao"),
+        "totalpossiveiseleitores": json_para_salvar.get("totalpossiveiseleitores")
+    }
+
+    if save_data(ELECTION_FILE, dados_eleicoes):
+        print("Eleição salva (sobrescrita) com sucesso!")
+        return jsonify({"message": "Eleição salva!", "serialeleicao": serial_eleicao}), 200
+    else:
+        print("Erro ao salvar a eleição.")
+        return jsonify({"error": "Erro ao salvar a eleição."}), 500
+
+
 
 if __name__ == "__main__":
     os.makedirs(DATA_PATH, exist_ok=True)

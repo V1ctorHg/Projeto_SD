@@ -1,6 +1,11 @@
 <div class="results-container">
   <h2>Resultados da Votação</h2>
   
+  <div *ngIf="!loading && !error" class="status-badge" 
+       [ngClass]="{'active': electionResults.eleicaoativa, 'finished': !electionResults.eleicaoativa}">
+    {{ electionResults.eleicaoativa ? 'Eleição Ativa - Votos em Processamento' : 'Eleição Finalizada - Votos Processados' }}
+  </div>
+
   <div *ngIf="loading" class="loading">
     Carregando resultados...
   </div>
@@ -10,7 +15,7 @@
   </div>
 
   <div *ngIf="!loading && !error">
-    <div *ngIf="Object.keys(results).length === 0" class="no-results">
+    <div *ngIf="Object.keys(electionResults).length === 0" class="no-results">
       Nenhum resultado disponível no momento.
     </div>
 

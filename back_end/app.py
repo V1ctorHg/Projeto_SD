@@ -166,56 +166,90 @@ def get_results():
     try:
         print("\n=== Obtendo resultados do servidor core ===")
         response = requests.get(f"{CORE_URL}/results")
-        response.raise_for_status()
-        data = response.json()
-        print(f"Dados recebidos: {data}")
+        response.raise_for_status()  # Verifica se deu erro HTTP (404, 500 etc.)
+
+        data = response.json()  # Converte o JSON
+
+        votes = data.get("votes", [])
+        candidates = data.get("candidates", [])
+        election_data = data.get("election_data", {})
+
+        print("\n=== DEBUG RESULTADOS ===")
+        print(f"Votos carregados: {votes}")
+        print(f"Candidatos carregados: {candidates}")
+        print(f"Dados da eleição carregados: {election_data}")
+
+        # Inicializar dicionário de resultados
+        results = {}
+        for candidate in candidates:
+            candidate_number = str(candidate["number"])
+            results[candidate_number] = {
+                "name": candidate["name"],
+                "number": candidate["number"],
+                "party": candidate["party"],
+                "votes": 0
+            }
+
+        # Acumuladores auxiliares
+        votos_alternativo = {}
+        eleicao_ativa = False
+
+        # Somar votos_por_partido e verificar ativaeleicao em cada eleição
+        for eleicao in election_data.values():
+            votos = eleicao.get("votos_por_partido", {})
+            for numero_candidato, quantidade in votos.items():
+                numero_candidato = str(numero_candidato)
+                votos_alternativo[numero_candidato] = votos_alternativo.get(numero_candidato, 0) + quantidade
+
+            if eleicao.get("ativaeleicao", False):
+                eleicao_ativa = True
+
+        # Atualizar os votos no resultado
+        for numero_candidato, votos in votos_alternativo.items():
+            if numero_candidato in results:
+                results[numero_candidato]["votes"] += votos
+            else:
+                # Se o número não estiver na lista de candidatos, ainda assim registra
+                results[numero_candidato] = {
+                    "name": "Desconhecido",
+                    "number": int(numero_candidato),
+                    "party": "Desconhecido",
+                    "votes": votos
+                }
+
+        # Somar os votos normais (não alternativos)
+        for vote in votes:
+            candidate_number = str(vote["number"])
+            if candidate_number in results:
+                results[candidate_number]["votes"] += 1
+
+        # Adiciona info de eleição ativa
+        results["eleicaoativa"] = eleicao_ativa
+
+        print(f"Resultados finais: {results}")
+        print("=== FIM DEBUG ===\n")
         print("=== Fim da requisição ===\n")
-        return jsonify(data)
+        return jsonify(results)
     except RequestException as e:
         print(f"Erro ao obter resultados: {e}")
         return jsonify({"error": "Erro ao obter resultados"}), 500
 
-@app.route('/electionalternative', methods =['POST', 'GET'])
+@app.route('/electionalternative', methods =['POST'])
 def electionalternative():
     if request.method == 'POST':
         data = request.json
         print(f"Dados recebidos: {data}")
-        resultados_cidades = eleicao.processar_eleicao(data["num_cidades"], data["partidos"], data["populacao_total"])
+
+        response = requests.get(f"{CORE_URL}/candidates")
+        response.raise_for_status()
+        print(f"CLIENTE: Dados recebidos: {response.json()}")
+
+        candidatos = [candidato['number'] for candidato in response.json()]
+        print(f"CLIENTE: Candidatos: {candidatos}")
+
+        resultados_cidades = eleicao.processar_eleicao(data["num_cidades"], candidatos, data["populacao_total"])
         enviar_resultados(resultados_cidades)
         return jsonify({"message": "Dados recebidos com sucesso!"})
-    elif request.method == 'GET':
-
-        try:
-            # Servidor Local faz a requisição GET para o "Core"
-            core = (f"{CORE_URL}/electionalternative")
-            print(f"SERVIDOR LOCAL: Buscando dados do Core em {core}...")
-            response_from_core = requests.get(core, timeout=10) # timeout de 10 segundos
-            response_from_core.raise_for_status() # Verifica se houve erro HTTP (4xx ou 5xx) na resposta do Core
-
-            election_data = response_from_core.json() # Pega o JSON retornado pelo Core
-            print("SERVIDOR LOCAL: Dados recebidos do Core com sucesso.")
-            
-            # Retorna os dados recebidos do Core para o Cliente Angular
-            return jsonify(election_data), 200
-
-        except requests.exceptions.Timeout:
-            print("SERVIDOR LOCAL: Timeout ao tentar contatar o Core.")
-            return jsonify({"error": "Serviço principal (Core) demorou a responder."}), 504 # Gateway Timeout
-        except requests.exceptions.ConnectionError:
-            print("SERVIDOR LOCAL: Não foi possível conectar ao Core.")
-            return jsonify({"error": "Falha ao conectar com o serviço principal (Core)."}), 503 # Service Unavailable
-        except requests.exceptions.HTTPError as e:
-            # Se o Core retornou um erro HTTP (ex: 404, 500)
-            print(f"SERVIDOR LOCAL: O Core retornou um erro HTTP: {e.response.status_code}")
-            try:
-                # Tenta repassar a mensagem de erro do Core
-                return jsonify(e.response.json()), e.response.status_code
-            except ValueError: # Se a resposta de erro do Core não for JSON
-                return jsonify({"error": f"Erro do serviço Core ({e.response.status_code})"}), 502 # Bad Gateway
-        except Exception as e:
-            # Qualquer outro erro
-            print(f"SERVIDOR LOCAL: Erro inesperado: {str(e)}")
-            return jsonify({"error": f"Erro interno no servidor local: {str(e)}"}), 500
     
 @app.route('/')
 def index():

@@ -1,6 +1,8 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ApiService } from '../../services/api.service';
+import { timer } from 'rxjs';
+import { switchMap } from 'rxjs/operators';
 
 interface Candidate {
   name: string;
@@ -12,8 +14,9 @@ interface CandidateResult extends Candidate {
   votes: number;
 }
 
-interface Results {
-  [key: string]: CandidateResult;
+interface ElectionResults {
+  [key: string]: CandidateResult | boolean;
+  eleicaoativa: boolean;
 }
 
 @Component({
@@ -23,33 +26,57 @@ interface Results {
   templateUrl: './results.component.html',
   styleUrls: ['./results.component.css']
 })
-export class ResultsComponent implements OnInit {
-  results: Results = {};
+export class ResultsComponent implements OnInit, OnDestroy {
+  electionResults: ElectionResults = {
+    eleicaoativa: false
+  };
   loading = true;
   error: string | null = null;
+  private pollingSubscription: any;
+  private readonly POLLING_INTERVAL_ACTIVE = 3000;  // 3 segundos quando ativa
+  private readonly POLLING_INTERVAL_INACTIVE = 10000;  // 30 segundos quando inativa
 
   protected readonly Object = Object;
 
   constructor(private apiService: ApiService) {}
 
   ngOnInit() {
-    this.loadResults();
+    this.startPolling();
   }
 
-  private loadResults() {
-    this.loading = true;
-    this.error = null;
-    
-    this.apiService.getResults().subscribe({
-      next: (data) => {
-        // console.log('Dados recebidos:', data);
-        if (!data || typeof data !== 'object') {
-          this.error = 'Formato de dados inválido';
-          return;
+  ngOnDestroy() {
+    this.stopPolling();
+  }
+
+  private startPolling() {
+    // Primeira requisição imediata
+    this.fetchResults();
+
+    // Inicia o polling
+    this.pollingSubscription = timer(0, this.POLLING_INTERVAL_ACTIVE).pipe(
+      switchMap(() => this.apiService.getResults())
+    ).subscribe({
+      next: (results) => {
+        this.electionResults = results;
+        this.loading = false;
+
+        // Se a eleição não está mais ativa, muda o intervalo
+        if (!results.eleicaoativa) {
+          this.restartPollingWithLowerFrequency();
         }
-        this.results = data;
-        //console.log('Resultados processados:', this.results);
-        //console.log('Resultados ordenados:', this.sortedResults());
+      },
+      error: (err) => {
+        console.error('Erro ao carregar resultados:', err);
+        this.error = 'Erro ao carregar resultados. Por favor, tente novamente.';
+        this.loading = false;
+      }
+    });
+  }
+
+  private fetchResults() {
+    this.apiService.getResults().subscribe({
+      next: (results) => {
+        this.electionResults = results;
         this.loading = false;
       },
       error: (err) => {
@@ -60,12 +87,37 @@ export class ResultsComponent implements OnInit {
     });
   }
 
+  private restartPollingWithLowerFrequency() {
+    this.stopPolling();
+    
+    this.pollingSubscription = timer(0, this.POLLING_INTERVAL_INACTIVE).pipe(
+      switchMap(() => this.apiService.getResults())
+    ).subscribe({
+      next: (results) => {
+        this.electionResults = results;
+        this.loading = false;
+      },
+      error: (err) => {
+        console.error('Erro ao carregar resultados:', err);
+        this.error = 'Erro ao carregar resultados. Por favor, tente novamente.';
+        this.loading = false;
+      }
+    });
+  }
+
+  private stopPolling() {
+    if (this.pollingSubscription) {
+      this.pollingSubscription.unsubscribe();
+      this.pollingSubscription = null;
+    }
+  }
+
   sortedResults(): CandidateResult[] {
-    if (!this.results) return [];
-    const results = Object.values(this.results)
-      .filter(r => r && typeof r === 'object' && 'votes' in r)
+    return Object.entries(this.electionResults)
+      .filter(([key, value]) => 
+        key !== 'eleicaoativa' && typeof value === 'object' && 'votes' in value)
+      .map(([_, value]) => value as CandidateResult)
       .sort((a, b) => b.votes - a.votes);
-    return results;
   }
 
   calculateTotalVotes(): number {

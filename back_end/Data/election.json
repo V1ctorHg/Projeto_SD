@@ -1,12 +1,28 @@
 {
-    "electionpart": 14,
-    "serialeleicao": 6,
-    "totalpopulacao": 1000000,
-    "totalvotos": 699354,
-    "votos_por_partido": {
-        "Partido A": 326303,
-        "Partido B": 373051
+    "22": {
+        "serialeleicao": 22,
+        "electionpart": 14,
+        "totalpopulacao": 1000,
+        "totalvotos": 692,
+        "votos_por_partido": {
+            "1": 396,
+            "2": 97,
+            "3": 199
+        },
+        "ativaeleicao": false,
+        "totalpossiveiseleitores": 1000
     },
-    "ativaeleicao": false,
-    "totalpossiveiseleitores": 1000000
+    "23": {
+        "serialeleicao": 23,
+        "electionpart": 24,
+        "totalpopulacao": 1000000,
+        "totalvotos": 696208,
+        "votos_por_partido": {
+            "1": 165703,
+            "2": 337592,
+            "3": 192913
+        },
+        "ativaeleicao": false,
+        "totalpossiveiseleitores": 1000000
+    }
 }
