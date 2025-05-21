@@ -1,6 +1,9 @@
 from flask import Flask, jsonify, request
 from flask_cors import CORS # type: ignore
+import waitress
 import requests
+import threading
+from queue import Queue
 from requests.exceptions import RequestException
 import numpy as np
 import time
@@ -11,6 +14,23 @@ CORS(app)
 
 CORE_URL = "http://127.0.0.1:5001"  # URL do servidor fake (fake_server.py)
 
+MAX_TENTATIVAS = 5
+DELAY_RETENTATIVA = 5
+
+#Fila de mensagens (só para as eleições)
+fila_eleicoes = Queue()
+
+#Thread para processar as eleições
+def worker():
+    while True:
+        data = fila_eleicoes.get()
+        print(f"Fila de eleições: {fila_eleicoes}")
+        if data is None:
+            break
+        processar_eleicao(data)
+        fila_eleicoes.task_done()
+
+threading.Thread(target=worker, daemon=True).start()
 
 #Eleicao alternativa
 def espera_resultados(populacao):
@@ -21,7 +41,7 @@ def espera_resultados(populacao):
     tempo_maximo = 25000  # 25 segundos em milissegundos
     
     # Usa logaritmo para suavizar o crescimento com populações muito grandes
-    tempo_ms = min(tempo_maximo, int(np.log10(populacao + 1) * 1000))
+    tempo_ms = min(tempo_maximo, tempo_base)
     
     return tempo_ms/1000  # retorna em segundos
 
@@ -76,6 +96,18 @@ def eleicao_matematicamente_definida(votos_por_partido_atuais, populacao_total_d
         
     return False, None # Caso contrário, não está definido  
 
+
+def processar_eleicao(data):
+            response = requests.get(f"{CORE_URL}/candidates")
+            response.raise_for_status()
+            print(f"CLIENTE: Dados recebidos: {response.json()}")
+
+            candidatos = [candidato['number'] for candidato in response.json()]
+            print(f"CLIENTE: Candidatos: {candidatos}")
+
+            resultados_cidades = eleicao.processar_eleicao(data["num_cidades"], candidatos, data["populacao_total"])
+            enviar_resultados(resultados_cidades)
+
 def enviar_resultados(resultados):
     """
     Envia os resultados da eleição para o servidor.
@@ -84,7 +116,6 @@ def enviar_resultados(resultados):
         resultados: Lista de dicionários com os resultados de cada cidade
     """
     eleicaoativa = True
-    quantidade_cidades = len(resultados)
 
     totalpopulacao = 0
     totalvotos = 0
@@ -122,20 +153,28 @@ def enviar_resultados(resultados):
             #depois colocar aqui o usuário que solicitou a eleição e o timestamp
         }
 
-         # Envia este JSON para o servidor Flask
-        try:
-            core = (f"{CORE_URL}/electionalternative")
-            resposta_servidor = requests.post(core, json=json_eleicao, timeout=10)
-            resposta_servidor.raise_for_status() # Verifica se houve erro HTTP (4xx ou 5xx)
-            print(f"CLIENTE: Iteração {i}: JSON enviado. Servidor respondeu: {resposta_servidor.json().get('message')}")
-            serialdaeleicao = resposta_servidor.json().get('serialeleicao')
-        except requests.exceptions.RequestException as e:
-            print(f"CLIENTE: Iteração {i}: Falha ao enviar JSON para o servidor. Erro: {e}")
+         # Envia este JSON para o servidor Flask, tentando até MAX_TENTATIVAS vezes
+        for tentativa in range(MAX_TENTATIVAS):
+            try:
+                core = (f"{CORE_URL}/electionalternative")
+                resposta_servidor = requests.post(core, json=json_eleicao, timeout=10)
+                resposta_servidor.raise_for_status() # Verifica se houve erro HTTP (4xx ou 5xx)
+                print(f"CLIENTE: Iteração {i}: JSON enviado. Servidor respondeu: {resposta_servidor.json().get('message')}")
+                serialdaeleicao = resposta_servidor.json().get('serialeleicao')
+                #time.sleep(0.2)
+                break
+            except requests.exceptions.RequestException as e:
+                print(f"CLIENTE: Iteração {i}: Falha ao enviar JSON para o servidor. Erro: {e}")
+                if tentativa < MAX_TENTATIVAS - 1:
+                    time.sleep(DELAY_RETENTATIVA)
+                else:
+                    print(f"CLIENTE: Iteração {i}: Falha após {MAX_TENTATIVAS} tentativas. Retornando erro.")
+                    return jsonify({"error": "Erro ao enviar dados para o servidor"}), 500
 
         i += 1
         time.sleep(espera_resultados(cidade["populacao"]))
 
-    return jsonify({"message": "Eleição finalizada com sucesso!"})  # Retorna o último estado
+    return 
 
 
 
@@ -240,20 +279,12 @@ def electionalternative():
         data = request.json
         print(f"Dados recebidos: {data}")
 
-        response = requests.get(f"{CORE_URL}/candidates")
-        response.raise_for_status()
-        print(f"CLIENTE: Dados recebidos: {response.json()}")
-
-        candidatos = [candidato['number'] for candidato in response.json()]
-        print(f"CLIENTE: Candidatos: {candidatos}")
-
-        resultados_cidades = eleicao.processar_eleicao(data["num_cidades"], candidatos, data["populacao_total"])
-        enviar_resultados(resultados_cidades)
-        return jsonify({"message": "Dados recebidos com sucesso!"})
+        fila_eleicoes.put(data)
+        return jsonify({"message": "Parte da eleição colocada na fila"})
     
 @app.route('/')
 def index():
     return jsonify({"message": "API de votação rodando!"})
 
 if __name__ == "__main__":
-    app.run(port=5000, debug=True)
+    waitress.serve(app, host='0.0.0.0', port=5000, threads=32)

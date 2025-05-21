@@ -1,10 +1,11 @@
 from flask import Flask, jsonify, request
 from flask_cors import CORS # type: ignore
+import waitress
 import json
 import os
 import time
 import numpy as np
-from eleicoesalternativo import eleicao
+import uuid
 
 app = Flask(__name__)
 CORS(app)
@@ -12,7 +13,6 @@ CORS(app)
 DATA_PATH = os.path.join(os.path.dirname(__file__), "Data")
 CANDIDATES_FILE = os.path.join(DATA_PATH, "candidates.json")
 VOTES_FILE = os.path.join(DATA_PATH, "votes.json")
-SERIAL_VOTES_FILE = os.path.join(DATA_PATH, "serial_votes.json")
 
 ELECTION_FILE = os.path.join(DATA_PATH, "election.json")
 
@@ -105,15 +105,10 @@ def electionalternative():
     # Gera ou recupera o serial da eleição
     if part == 0:
         try:
-            with open(SERIAL_VOTES_FILE, "r") as file:
-                serial = json.load(file)
-                serial_eleicao = serial.get("serial", 0)
-        except FileNotFoundError:
-            serial_eleicao = 0
-
-        json_para_salvar["serialeleicao"] = serial_eleicao
-        novo_serial = serial_eleicao + 1
-        save_data(SERIAL_VOTES_FILE, {"serial": novo_serial})
+            serial_eleicao = str(uuid.uuid4())
+        except Exception as e:
+            print(f"Erro ao gerar UUID: {e}")
+            return jsonify({"error": "Erro ao gerar UUID"}), 500
     else:
         serial_eleicao = json_para_salvar.get("serialeleicao")
 
@@ -163,4 +158,4 @@ if __name__ == "__main__":
 
     print(f"Servidor iniciado na porta 5001")
     print(f"Diretório de dados: {DATA_PATH}")
-    app.run(port=5001, debug=True)
+    waitress.serve(app, host='0.0.0.0', port=5001, threads=16)
