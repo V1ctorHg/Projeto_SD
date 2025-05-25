@@ -28,6 +28,7 @@ interface CreateElection {
 @Injectable({ providedIn: 'root' })
 export class ApiService {
   private baseUrl = 'http://localhost:5000';
+  //private baseUrl = 'http://backend:5000'; //para rodar no docker
 
   constructor(private http: HttpClient) {}
 

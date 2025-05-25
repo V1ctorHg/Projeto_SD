@@ -8,6 +8,7 @@ import { catchError, tap } from 'rxjs/operators';
 })
 export class ElectionService {
   private readonly API_URL = 'http://localhost:5000/electionalternative';
+  //private readonly API_URL = 'http://backend:5000/electionalternative'; //para rodar no docker
 
   constructor(private http: HttpClient) {}
 

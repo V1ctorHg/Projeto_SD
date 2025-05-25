@@ -1,0 +1,665 @@
+{
+    "6a1eb3ed-49ff-47df-b1ee-9a9b1a009445": {
+        "serialeleicao": "6a1eb3ed-49ff-47df-b1ee-9a9b1a009445",
+        "electionpart": 249,
+        "totalpopulacao": 250000000,
+        "totalvotos": 174708522,
+        "votos_por_partido": {
+            "1": 54961349,
+            "2": 62908955,
+            "3": 56838218
+        },
+        "ativaeleicao": false,
+        "totalpossiveiseleitores": 250000000
+    },
+    "1aa783c6-79a2-4679-83a1-642c1f3cce06": {
+        "serialeleicao": "1aa783c6-79a2-4679-83a1-642c1f3cce06",
+        "electionpart": 99,
+        "totalpopulacao": 1000,
+        "totalvotos": 702,
+        "votos_por_partido": {
+            "1": 220,
+            "2": 231,
+            "3": 251
+        },
+        "ativaeleicao": false,
+        "totalpossiveiseleitores": 1000
+    },
+    "216926a7-1f90-4df1-9c16-d6c9fd80ba71": {
+        "serialeleicao": "216926a7-1f90-4df1-9c16-d6c9fd80ba71",
+        "electionpart": 99,
+        "totalpopulacao": 1000,
+        "totalvotos": 702,
+        "votos_por_partido": {
+            "1": 243,
+            "2": 190,
+            "3": 269
+        },
+        "ativaeleicao": false,
+        "totalpossiveiseleitores": 1000
+    },
+    "7e648fe6-7844-49aa-94b3-bf7eb7ee2a8a": {
+        "serialeleicao": "7e648fe6-7844-49aa-94b3-bf7eb7ee2a8a",
+        "electionpart": 99,
+        "totalpopulacao": 1000,
+        "totalvotos": 700,
+        "votos_por_partido": {
+            "1": 232,
+            "2": 226,
+            "3": 242
+        },
+        "ativaeleicao": false,
+        "totalpossiveiseleitores": 1000
+    },
+    "d88a680e-2a7f-4452-8d54-6127d8170508": {
+        "serialeleicao": "d88a680e-2a7f-4452-8d54-6127d8170508",
+        "electionpart": 99,
+        "totalpopulacao": 1000,
+        "totalvotos": 702,
+        "votos_por_partido": {
+            "1": 247,
+            "2": 218,
+            "3": 237
+        },
+        "ativaeleicao": false,
+        "totalpossiveiseleitores": 1000
+    },
+    "c519fa83-e584-4b03-b703-96aca4958126": {
+        "serialeleicao": "c519fa83-e584-4b03-b703-96aca4958126",
+        "electionpart": 99,
+        "totalpopulacao": 1000,
+        "totalvotos": 699,
+        "votos_por_partido": {
+            "1": 288,
+            "2": 156,
+            "3": 255
+        },
+        "ativaeleicao": false,
+        "totalpossiveiseleitores": 1000
+    },
+    "6d0297f4-4f34-4cfe-b5ab-1661a0431fd6": {
+        "serialeleicao": "6d0297f4-4f34-4cfe-b5ab-1661a0431fd6",
+        "electionpart": 99,
+        "totalpopulacao": 1000,
+        "totalvotos": 700,
+        "votos_por_partido": {
+            "1": 238,
+            "2": 266,
+            "3": 196
+        },
+        "ativaeleicao": false,
+        "totalpossiveiseleitores": 1000
+    },
+    "45574286-9c20-470a-abe7-b64c0425dcee": {
+        "serialeleicao": "45574286-9c20-470a-abe7-b64c0425dcee",
+        "electionpart": 99,
+        "totalpopulacao": 1000,
+        "totalvotos": 703,
+        "votos_por_partido": {
+            "1": 230,
+            "2": 251,
+            "3": 222
+        },
+        "ativaeleicao": false,
+        "totalpossiveiseleitores": 1000
+    },
+    "b81dfcd2-2833-4463-915f-259978944d39": {
+        "serialeleicao": "b81dfcd2-2833-4463-915f-259978944d39",
+        "electionpart": 99,
+        "totalpopulacao": 1000,
+        "totalvotos": 702,
+        "votos_por_partido": {
+            "1": 223,
+            "2": 243,
+            "3": 236
+        },
+        "ativaeleicao": false,
+        "totalpossiveiseleitores": 1000
+    },
+    "99dc10bd-54fe-4548-a3d4-8208ba736cd6": {
+        "serialeleicao": "99dc10bd-54fe-4548-a3d4-8208ba736cd6",
+        "electionpart": 99,
+        "totalpopulacao": 1000,
+        "totalvotos": 703,
+        "votos_por_partido": {
+            "1": 276,
+            "2": 189,
+            "3": 238
+        },
+        "ativaeleicao": false,
+        "totalpossiveiseleitores": 1000
+    },
+    "c774aa7b-25dd-4c74-b162-1bac495edfa3": {
+        "serialeleicao": "c774aa7b-25dd-4c74-b162-1bac495edfa3",
+        "electionpart": 99,
+        "totalpopulacao": 1000,
+        "totalvotos": 703,
+        "votos_por_partido": {
+            "1": 282,
+            "2": 225,
+            "3": 196
+        },
+        "ativaeleicao": false,
+        "totalpossiveiseleitores": 1000
+    },
+    "8a4e7644-f026-40fd-972c-87bf9db9c345": {
+        "serialeleicao": "8a4e7644-f026-40fd-972c-87bf9db9c345",
+        "electionpart": 99,
+        "totalpopulacao": 1000,
+        "totalvotos": 702,
+        "votos_por_partido": {
+            "1": 223,
+            "2": 212,
+            "3": 267
+        },
+        "ativaeleicao": false,
+        "totalpossiveiseleitores": 1000
+    },
+    "4f93511f-6880-4c0e-a361-8888f665fd63": {
+        "serialeleicao": "4f93511f-6880-4c0e-a361-8888f665fd63",
+        "electionpart": 99,
+        "totalpopulacao": 1000,
+        "totalvotos": 699,
+        "votos_por_partido": {
+            "1": 216,
+            "2": 216,
+            "3": 267
+        },
+        "ativaeleicao": false,
+        "totalpossiveiseleitores": 1000
+    },
+    "cdaed192-65b7-4241-9da7-3b87dec7220b": {
+        "serialeleicao": "cdaed192-65b7-4241-9da7-3b87dec7220b",
+        "electionpart": 99,
+        "totalpopulacao": 1000,
+        "totalvotos": 703,
+        "votos_por_partido": {
+            "1": 274,
+            "2": 195,
+            "3": 234
+        },
+        "ativaeleicao": false,
+        "totalpossiveiseleitores": 1000
+    },
+    "ff2cd83d-9afb-4eae-8f43-33c6e2142c6c": {
+        "serialeleicao": "ff2cd83d-9afb-4eae-8f43-33c6e2142c6c",
+        "electionpart": 99,
+        "totalpopulacao": 1000,
+        "totalvotos": 697,
+        "votos_por_partido": {
+            "1": 239,
+            "2": 243,
+            "3": 215
+        },
+        "ativaeleicao": false,
+        "totalpossiveiseleitores": 1000
+    },
+    "c77ab629-7b5e-4a5b-a9a8-7ee1909a1101": {
+        "serialeleicao": "c77ab629-7b5e-4a5b-a9a8-7ee1909a1101",
+        "electionpart": 99,
+        "totalpopulacao": 1000,
+        "totalvotos": 705,
+        "votos_por_partido": {
+            "1": 278,
+            "2": 241,
+            "3": 186
+        },
+        "ativaeleicao": false,
+        "totalpossiveiseleitores": 1000
+    },
+    "0f66294e-db77-4afc-af12-13da76802748": {
+        "serialeleicao": "0f66294e-db77-4afc-af12-13da76802748",
+        "electionpart": 99,
+        "totalpopulacao": 1000,
+        "totalvotos": 708,
+        "votos_por_partido": {
+            "1": 227,
+            "2": 253,
+            "3": 228
+        },
+        "ativaeleicao": false,
+        "totalpossiveiseleitores": 1000
+    },
+    "8e87aeb0-55f1-49bd-b5bd-c1279ca379ad": {
+        "serialeleicao": "8e87aeb0-55f1-49bd-b5bd-c1279ca379ad",
+        "electionpart": 99,
+        "totalpopulacao": 1000,
+        "totalvotos": 706,
+        "votos_por_partido": {
+            "1": 264,
+            "2": 231,
+            "3": 211
+        },
+        "ativaeleicao": false,
+        "totalpossiveiseleitores": 1000
+    },
+    "46fce734-6df4-4656-a792-3de083ef75df": {
+        "serialeleicao": "46fce734-6df4-4656-a792-3de083ef75df",
+        "electionpart": 99,
+        "totalpopulacao": 1000,
+        "totalvotos": 699,
+        "votos_por_partido": {
+            "1": 241,
+            "2": 221,
+            "3": 237
+        },
+        "ativaeleicao": false,
+        "totalpossiveiseleitores": 1000
+    },
+    "6e6a70e5-4fed-43cf-975f-b213a1552792": {
+        "serialeleicao": "6e6a70e5-4fed-43cf-975f-b213a1552792",
+        "electionpart": 99,
+        "totalpopulacao": 1000,
+        "totalvotos": 699,
+        "votos_por_partido": {
+            "1": 157,
+            "2": 306,
+            "3": 236
+        },
+        "ativaeleicao": false,
+        "totalpossiveiseleitores": 1000
+    },
+    "18ec6a10-8976-4459-9080-529a2190b8aa": {
+        "serialeleicao": "18ec6a10-8976-4459-9080-529a2190b8aa",
+        "electionpart": 99,
+        "totalpopulacao": 1000,
+        "totalvotos": 702,
+        "votos_por_partido": {
+            "1": 240,
+            "2": 243,
+            "3": 219
+        },
+        "ativaeleicao": false,
+        "totalpossiveiseleitores": 1000
+    },
+    "4fd72a8a-1356-4931-9a47-4fae805d5fa8": {
+        "serialeleicao": "4fd72a8a-1356-4931-9a47-4fae805d5fa8",
+        "electionpart": 99,
+        "totalpopulacao": 1000,
+        "totalvotos": 697,
+        "votos_por_partido": {
+            "1": 191,
+            "2": 228,
+            "3": 278
+        },
+        "ativaeleicao": false,
+        "totalpossiveiseleitores": 1000
+    },
+    "f6822599-2c16-472a-8465-11293831f9f2": {
+        "serialeleicao": "f6822599-2c16-472a-8465-11293831f9f2",
+        "electionpart": 99,
+        "totalpopulacao": 1000,
+        "totalvotos": 703,
+        "votos_por_partido": {
+            "1": 226,
+            "2": 259,
+            "3": 218
+        },
+        "ativaeleicao": false,
+        "totalpossiveiseleitores": 1000
+    },
+    "a3ff6a29-b492-4913-aafb-612f77c41e75": {
+        "serialeleicao": "a3ff6a29-b492-4913-aafb-612f77c41e75",
+        "electionpart": 99,
+        "totalpopulacao": 1000000,
+        "totalvotos": 704207,
+        "votos_por_partido": {
+            "1": 225433,
+            "2": 227694,
+            "3": 251080
+        },
+        "ativaeleicao": false,
+        "totalpossiveiseleitores": 1000000
+    },
+    "ae20c407-1a9e-44b7-b586-b8bca485ef82": {
+        "serialeleicao": "ae20c407-1a9e-44b7-b586-b8bca485ef82",
+        "electionpart": 99,
+        "totalpopulacao": 1000000,
+        "totalvotos": 703400,
+        "votos_por_partido": {
+            "1": 249349,
+            "2": 258015,
+            "3": 196036
+        },
+        "ativaeleicao": false,
+        "totalpossiveiseleitores": 1000000
+    },
+    "fb26b2a7-e75b-4663-8870-5d818cb6733f": {
+        "serialeleicao": "fb26b2a7-e75b-4663-8870-5d818cb6733f",
+        "electionpart": 99,
+        "totalpopulacao": 1000000,
+        "totalvotos": 701735,
+        "votos_por_partido": {
+            "1": 260785,
+            "2": 240016,
+            "3": 200934
+        },
+        "ativaeleicao": false,
+        "totalpossiveiseleitores": 1000000
+    },
+    "76a83846-cbd3-4d78-8c52-6d9a5693db65": {
+        "serialeleicao": "76a83846-cbd3-4d78-8c52-6d9a5693db65",
+        "electionpart": 99,
+        "totalpopulacao": 1000000,
+        "totalvotos": 701267,
+        "votos_por_partido": {
+            "1": 215838,
+            "2": 230362,
+            "3": 255067
+        },
+        "ativaeleicao": false,
+        "totalpossiveiseleitores": 1000000
+    },
+    "c7f999bb-1c61-4061-abfd-404fc8bacf6a": {
+        "serialeleicao": "c7f999bb-1c61-4061-abfd-404fc8bacf6a",
+        "electionpart": 99,
+        "totalpopulacao": 1000000,
+        "totalvotos": 701730,
+        "votos_por_partido": {
+            "1": 213063,
+            "2": 262327,
+            "3": 226340
+        },
+        "ativaeleicao": false,
+        "totalpossiveiseleitores": 1000000
+    },
+    "03956920-350b-4592-ac38-3dc45c926eda": {
+        "serialeleicao": "03956920-350b-4592-ac38-3dc45c926eda",
+        "electionpart": 99,
+        "totalpopulacao": 1000000,
+        "totalvotos": 701854,
+        "votos_por_partido": {
+            "1": 232304,
+            "2": 226979,
+            "3": 242571
+        },
+        "ativaeleicao": false,
+        "totalpossiveiseleitores": 1000000
+    },
+    "0a24687e-139f-4f10-8c3b-7c95922af0de": {
+        "serialeleicao": "0a24687e-139f-4f10-8c3b-7c95922af0de",
+        "electionpart": 99,
+        "totalpopulacao": 1000000,
+        "totalvotos": 700016,
+        "votos_por_partido": {
+            "1": 183974,
+            "2": 267099,
+            "3": 248943
+        },
+        "ativaeleicao": false,
+        "totalpossiveiseleitores": 1000000
+    },
+    "d1cc5d32-2145-4137-8a9e-18f86b0af9fd": {
+        "serialeleicao": "d1cc5d32-2145-4137-8a9e-18f86b0af9fd",
+        "electionpart": 99,
+        "totalpopulacao": 1000000,
+        "totalvotos": 700187,
+        "votos_por_partido": {
+            "1": 211219,
+            "2": 220574,
+            "3": 268394
+        },
+        "ativaeleicao": false,
+        "totalpossiveiseleitores": 1000000
+    },
+    "6792a589-fdcf-47e8-9542-dde5f8483982": {
+        "serialeleicao": "6792a589-fdcf-47e8-9542-dde5f8483982",
+        "electionpart": 99,
+        "totalpopulacao": 1000000,
+        "totalvotos": 703099,
+        "votos_por_partido": {
+            "1": 215693,
+            "2": 264335,
+            "3": 223071
+        },
+        "ativaeleicao": false,
+        "totalpossiveiseleitores": 1000000
+    },
+    "68c97214-726e-4fc2-96d8-cc7c9ecd6d60": {
+        "serialeleicao": "68c97214-726e-4fc2-96d8-cc7c9ecd6d60",
+        "electionpart": 99,
+        "totalpopulacao": 1000000,
+        "totalvotos": 697286,
+        "votos_por_partido": {
+            "1": 196369,
+            "2": 216701,
+            "3": 284216
+        },
+        "ativaeleicao": false,
+        "totalpossiveiseleitores": 1000000
+    },
+    "62613419-3522-4e87-a660-e3e79d50c1c9": {
+        "serialeleicao": "62613419-3522-4e87-a660-e3e79d50c1c9",
+        "electionpart": 99,
+        "totalpopulacao": 1000000,
+        "totalvotos": 698850,
+        "votos_por_partido": {
+            "1": 217062,
+            "2": 234348,
+            "3": 247440
+        },
+        "ativaeleicao": false,
+        "totalpossiveiseleitores": 1000000
+    },
+    "864a27a6-0578-4116-96b4-ef5f56a9b243": {
+        "serialeleicao": "864a27a6-0578-4116-96b4-ef5f56a9b243",
+        "electionpart": 98,
+        "totalpopulacao": 1000000,
+        "totalvotos": 702060,
+        "votos_por_partido": {
+            "1": 259976,
+            "2": 233550,
+            "3": 208534
+        },
+        "ativaeleicao": false,
+        "totalpossiveiseleitores": 1000000
+    },
+    "030a41e4-a862-4e1c-a9ba-1ddc085d9364": {
+        "serialeleicao": "030a41e4-a862-4e1c-a9ba-1ddc085d9364",
+        "electionpart": 99,
+        "totalpopulacao": 1000000,
+        "totalvotos": 697593,
+        "votos_por_partido": {
+            "1": 237903,
+            "2": 242422,
+            "3": 217268
+        },
+        "ativaeleicao": false,
+        "totalpossiveiseleitores": 1000000
+    },
+    "900f42da-cc3f-417e-bb05-b50107d21737": {
+        "serialeleicao": "900f42da-cc3f-417e-bb05-b50107d21737",
+        "electionpart": 99,
+        "totalpopulacao": 1000000,
+        "totalvotos": 697690,
+        "votos_por_partido": {
+            "1": 238917,
+            "2": 242382,
+            "3": 216391
+        },
+        "ativaeleicao": false,
+        "totalpossiveiseleitores": 1000000
+    },
+    "3a27e3a3-1ad2-4a41-869a-5fdaf2eb06c7": {
+        "serialeleicao": "3a27e3a3-1ad2-4a41-869a-5fdaf2eb06c7",
+        "electionpart": 99,
+        "totalpopulacao": 1000000,
+        "totalvotos": 704213,
+        "votos_por_partido": {
+            "1": 280435,
+            "2": 210472,
+            "3": 213306
+        },
+        "ativaeleicao": false,
+        "totalpossiveiseleitores": 1000000
+    },
+    "39c34ccc-a0c8-49fb-8a08-30352bbb6ddf": {
+        "serialeleicao": "39c34ccc-a0c8-49fb-8a08-30352bbb6ddf",
+        "electionpart": 99,
+        "totalpopulacao": 1000000,
+        "totalvotos": 703448,
+        "votos_por_partido": {
+            "1": 247228,
+            "2": 208863,
+            "3": 247357
+        },
+        "ativaeleicao": false,
+        "totalpossiveiseleitores": 1000000
+    },
+    "96878b20-dc77-4a22-bb9e-f9b74bc6a2b4": {
+        "serialeleicao": "96878b20-dc77-4a22-bb9e-f9b74bc6a2b4",
+        "electionpart": 98,
+        "totalpopulacao": 1000000,
+        "totalvotos": 700039,
+        "votos_por_partido": {
+            "1": 225798,
+            "2": 207613,
+            "3": 266628
+        },
+        "ativaeleicao": false,
+        "totalpossiveiseleitores": 1000000
+    },
+    "265aa472-b9c7-431f-a59a-4479e666ddf4": {
+        "serialeleicao": "265aa472-b9c7-431f-a59a-4479e666ddf4",
+        "electionpart": 99,
+        "totalpopulacao": 1000000,
+        "totalvotos": 699829,
+        "votos_por_partido": {
+            "1": 227230,
+            "2": 250852,
+            "3": 221747
+        },
+        "ativaeleicao": false,
+        "totalpossiveiseleitores": 1000000
+    },
+    "f8ccabce-01e4-4ae6-94ff-617bb056c21a": {
+        "serialeleicao": "f8ccabce-01e4-4ae6-94ff-617bb056c21a",
+        "electionpart": 99,
+        "totalpopulacao": 1000000,
+        "totalvotos": 702036,
+        "votos_por_partido": {
+            "1": 230374,
+            "2": 241136,
+            "3": 230526
+        },
+        "ativaeleicao": false,
+        "totalpossiveiseleitores": 1000000
+    },
+    "1965588a-2a17-422b-b480-82cfc9c2ec05": {
+        "serialeleicao": "1965588a-2a17-422b-b480-82cfc9c2ec05",
+        "electionpart": 99,
+        "totalpopulacao": 1000000,
+        "totalvotos": 702392,
+        "votos_por_partido": {
+            "1": 173160,
+            "2": 244340,
+            "3": 284892
+        },
+        "ativaeleicao": false,
+        "totalpossiveiseleitores": 1000000
+    },
+    "d1b2b123-2fee-46d0-9db3-013bde2040b5": {
+        "serialeleicao": "d1b2b123-2fee-46d0-9db3-013bde2040b5",
+        "electionpart": 99,
+        "totalpopulacao": 1000000,
+        "totalvotos": 696886,
+        "votos_por_partido": {
+            "1": 263436,
+            "2": 255080,
+            "3": 178370
+        },
+        "ativaeleicao": false,
+        "totalpossiveiseleitores": 1000000
+    },
+    "4d64ff94-c2ad-4e91-abb6-3fa3cf4d6e31": {
+        "serialeleicao": "4d64ff94-c2ad-4e91-abb6-3fa3cf4d6e31",
+        "electionpart": 99,
+        "totalpopulacao": 1000000,
+        "totalvotos": 699101,
+        "votos_por_partido": {
+            "1": 215034,
+            "2": 233766,
+            "3": 250301
+        },
+        "ativaeleicao": false,
+        "totalpossiveiseleitores": 1000000
+    },
+    "d76b66e7-d9b7-4bcc-a17a-2f0677bb694a": {
+        "serialeleicao": "d76b66e7-d9b7-4bcc-a17a-2f0677bb694a",
+        "electionpart": 97,
+        "totalpopulacao": 1000000,
+        "totalvotos": 701440,
+        "votos_por_partido": {
+            "1": 239343,
+            "2": 244878,
+            "3": 217219
+        },
+        "ativaeleicao": false,
+        "totalpossiveiseleitores": 1000000
+    },
+    "27e04dc0-dbea-434f-bebf-cece03786b71": {
+        "serialeleicao": "27e04dc0-dbea-434f-bebf-cece03786b71",
+        "electionpart": 99,
+        "totalpopulacao": 1000000,
+        "totalvotos": 699867,
+        "votos_por_partido": {
+            "1": 229933,
+            "2": 212817,
+            "3": 257117
+        },
+        "ativaeleicao": false,
+        "totalpossiveiseleitores": 1000000
+    },
+    "c1500ce3-ac65-4f8b-b0e9-c652e02061d7": {
+        "serialeleicao": "c1500ce3-ac65-4f8b-b0e9-c652e02061d7",
+        "electionpart": 99,
+        "totalpopulacao": 1000000,
+        "totalvotos": 699998,
+        "votos_por_partido": {
+            "1": 216129,
+            "2": 224064,
+            "3": 259805
+        },
+        "ativaeleicao": false,
+        "totalpossiveiseleitores": 1000000
+    },
+    "45641ee1-154a-4125-b267-481ad5e4ac89": {
+        "serialeleicao": "45641ee1-154a-4125-b267-481ad5e4ac89",
+        "electionpart": 99,
+        "totalpopulacao": 1000000,
+        "totalvotos": 701378,
+        "votos_por_partido": {
+            "1": 262252,
+            "2": 218185,
+            "3": 220941
+        },
+        "ativaeleicao": false,
+        "totalpossiveiseleitores": 1000000
+    },
+    "dc6a3313-dfbb-47de-9f5f-350199a4412a": {
+        "serialeleicao": "dc6a3313-dfbb-47de-9f5f-350199a4412a",
+        "electionpart": 99,
+        "totalpopulacao": 1000000,
+        "totalvotos": 699882,
+        "votos_por_partido": {
+            "1": 204786,
+            "2": 272560,
+            "3": 222536
+        },
+        "ativaeleicao": false,
+        "totalpossiveiseleitores": 1000000
+    },
+    "bff77412-ee28-4660-8e37-99c8f4e62617": {
+        "serialeleicao": "bff77412-ee28-4660-8e37-99c8f4e62617",
+        "electionpart": 99,
+        "totalpopulacao": 1000000,
+        "totalvotos": 699844,
+        "votos_por_partido": {
+            "1": 224080,
+            "2": 249471,
+            "3": 226293
+        },
+        "ativaeleicao": false,
+        "totalpossiveiseleitores": 1000000
+    }
+}

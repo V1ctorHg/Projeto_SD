@@ -1,0 +1,27 @@
+version: '3.9'
+
+services:
+  pseudo-core:
+    build: ./core
+    ports:
+      - "5001:5001"
+    volumes:
+      - ./core/Data:/app/Data
+
+  backend:
+    build: ./backend
+    ports:
+      - "5000:5000"
+    # quando estiver com o core definido: apaga o depends_on
+    depends_on:
+      - pseudo-core
+    # coloca o endereço e porta do core no environment
+    environment:
+      - CORE_URL=http://pseudo-core:5001
+
+  frontend:
+    build: ./frontend
+    ports:
+      - "4200:80"
+    depends_on:
+      - backend
