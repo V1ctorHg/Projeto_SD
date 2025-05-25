@@ -7,6 +7,7 @@ from queue import Queue
 from requests.exceptions import RequestException
 import numpy as np
 import time
+import os
 from eleicoesalternativo import eleicao
 
 app = Flask(__name__)
@@ -14,7 +15,7 @@ CORS(app)
 
 #CORE_URL = "http://127.0.0.1:5001"  # URL do servidor fake (fake_server.py)
 
-CORE_URL = "http://pseudo-core:5001" #para rodar no docker
+CORE_URL = os.getenv("CORE_URL", "http://pseudo-core:5001")  #para rodar no docker
 
 MAX_TENTATIVAS = 5
 DELAY_RETENTATIVA = 5
