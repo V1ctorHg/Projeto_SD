@@ -157,3 +157,67 @@ cd front-end/     # ou cd back-end/
 - Qualquer dúvida sobre execução, abra uma issue ou fale com o grupo.
 
 ---
+
+
+## 🚀 Como rodar com Docker
+
+### 📋 Pré-requisitos
+✅ Ter o [Docker Desktop](https://www.docker.com/products/docker-desktop/) instalado (Windows, Mac) **ou** o Docker Engine (Linux).  
+✅ Ter o [Docker Compose](https://docs.docker.com/compose/) disponível (vem embutido no Docker Desktop).
+
+---
+
+### 🏗️ Buildar e rodar tudo (com rebuild completo)
+> Use quando você **alterou código** (no backend, frontend ou pseudo-core).
+
+```bash
+./start.sh
+```
+
+Esse comando:
+✅ Rebuilda todas as imagens do zero, sem cache.  
+✅ Sobe os containers prontos pra uso.
+
+---
+
+### ⚡ Rodar rápido (sem rebuild)
+> Use quando **não alterou código**, só quer subir os containers já existentes.
+
+```bash
+./start-fast.sh
+```
+
+Esse comando:
+✅ Usa as imagens já construídas.  
+✅ Só sobe os containers, mais rápido.
+
+---
+
+### 🛑 Parar e remover tudo
+> Quando quiser derrubar tudo e limpar redes, volumes, etc.
+
+```bash
+./stop.sh
+```
+
+---
+
+### 🌍 Acessos locais
+
+| Serviço        | Endereço                                |
+|---------------|----------------------------------------|
+| Frontend      | [http://localhost:4200](http://localhost:4200) |
+| Backend (API) | [http://localhost:5000](http://localhost:5000) |
+| Pseudo-core   | [http://localhost:5001](http://localhost:5001) |
+
+---
+
+### 💡 Notas
+
+- Se estiver no Linux/macOS, lembre-se de dar permissão aos scripts:
+```bash
+chmod +x start.sh start-fast.sh stop.sh
+```
+
+- No Windows, use Git Bash, WSL ou PowerShell com Docker Desktop.
+---
