@@ -4,18 +4,14 @@ import { ApiService } from '../../services/api.service';
 import { timer } from 'rxjs';
 import { switchMap } from 'rxjs/operators';
 
-interface Candidate {
-  name: string;
-  number: number;
-  party: string;
+interface Resultado {
+  id: number;
+  nome: string;
+  votos: number;
 }
 
-interface CandidateResult extends Candidate {
-  votes: number;
-}
-
-interface ElectionResults {
-  [key: string]: CandidateResult | boolean;
+interface Results {
+  resultados: Resultado[];
   eleicaoativa: boolean;
 }
 
@@ -27,14 +23,12 @@ interface ElectionResults {
   styleUrls: ['./results.component.css']
 })
 export class ResultsComponent implements OnInit, OnDestroy {
-  electionResults: ElectionResults = {
-    eleicaoativa: false
-  };
+  resultados: Resultado[] = [];
+  electionResults: Results = { resultados: [], eleicaoativa: true };
   loading = true;
   error: string | null = null;
   private pollingSubscription: any;
-  private readonly POLLING_INTERVAL_ACTIVE = 3000;  // 3 segundos quando ativa
-  private readonly POLLING_INTERVAL_INACTIVE = 10000;  // 30 segundos quando inativa
+  private readonly POLLING_INTERVAL = 3000;  // 3 segundos
 
   protected readonly Object = Object;
 
@@ -53,17 +47,13 @@ export class ResultsComponent implements OnInit, OnDestroy {
     this.fetchResults();
 
     // Inicia o polling
-    this.pollingSubscription = timer(0, this.POLLING_INTERVAL_ACTIVE).pipe(
+    this.pollingSubscription = timer(0, this.POLLING_INTERVAL).pipe(
       switchMap(() => this.apiService.getResults())
     ).subscribe({
       next: (results) => {
         this.electionResults = results;
+        this.resultados = results.resultados;
         this.loading = false;
-
-        // Se a eleição não está mais ativa, muda o intervalo
-        if (!results.eleicaoativa) {
-          this.restartPollingWithLowerFrequency();
-        }
       },
       error: (err) => {
         console.error('Erro ao carregar resultados:', err);
@@ -77,24 +67,7 @@ export class ResultsComponent implements OnInit, OnDestroy {
     this.apiService.getResults().subscribe({
       next: (results) => {
         this.electionResults = results;
-        this.loading = false;
-      },
-      error: (err) => {
-        console.error('Erro ao carregar resultados:', err);
-        this.error = 'Erro ao carregar resultados. Por favor, tente novamente.';
-        this.loading = false;
-      }
-    });
-  }
-
-  private restartPollingWithLowerFrequency() {
-    this.stopPolling();
-    
-    this.pollingSubscription = timer(0, this.POLLING_INTERVAL_INACTIVE).pipe(
-      switchMap(() => this.apiService.getResults())
-    ).subscribe({
-      next: (results) => {
-        this.electionResults = results;
+        this.resultados = results.resultados;
         this.loading = false;
       },
       error: (err) => {
@@ -112,22 +85,17 @@ export class ResultsComponent implements OnInit, OnDestroy {
     }
   }
 
-  sortedResults(): CandidateResult[] {
-    return Object.entries(this.electionResults)
-      .filter(([key, value]) => 
-        key !== 'eleicaoativa' && typeof value === 'object' && 'votes' in value)
-      .map(([_, value]) => value as CandidateResult)
-      .sort((a, b) => b.votes - a.votes);
+  sortedResults(): Resultado[] {
+    return [...this.resultados].sort((a, b) => b.votos - a.votos);
   }
 
   calculateTotalVotes(): number {
-    return this.sortedResults()
-      .reduce((sum, candidate) => sum + candidate.votes, 0);
+    return this.resultados.reduce((sum, candidate) => sum + candidate.votos, 0);
   }
 
-  calculatePercentage(votes: number): number {
+  calculatePercentage(votos: number): number {
     const total = this.calculateTotalVotes();
     if (total === 0) return 0;
-    return Math.round((votes / total) * 100 * 100) / 100;
+    return Math.round((votos / total) * 100 * 100) / 100;
   }
 }

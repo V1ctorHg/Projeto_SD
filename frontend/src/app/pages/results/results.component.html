@@ -10,7 +10,7 @@
     Carregando resultados...
   </div>
 
-  <div *ngIf="error" class="error">
+  <div *ngIf="!loading && error" class="error-message">
     {{ error }}
   </div>
 
@@ -19,35 +19,22 @@
       Nenhum resultado disponível no momento.
     </div>
 
-    <div class="results-grid">
-      <div *ngFor="let entry of sortedResults()" class="result-card">
-        <div class="candidate-header">
-          <h3>{{ entry.name }}</h3>
-          <div class="candidate-details">
-            <div class="number">Número: {{ entry.number }}</div>
-            <div class="party">{{ entry.party }}</div>
-          </div>
-        </div>
-
-        <div class="vote-details">
-          <div class="vote-count">
-            <span class="votes">{{ entry.votes }}</span>
-            <span class="votes-label">votos</span>
-          </div>
-          
-          <div class="percentage-bar">
-            <div class="percentage">{{ calculatePercentage(entry.votes) }}%</div>
-            <div class="progress-bar">
-              <div class="progress" [style.width.%]="calculatePercentage(entry.votes)"></div>
-            </div>
-          </div>
-        </div>
-      </div>
+    <div class="total-votes">
+      Total de votos: {{ calculateTotalVotes() }}
     </div>
 
-    <div class="total-section">
-      <div class="total-votes">
-        Total de Votos: <strong>{{ calculateTotalVotes() }}</strong>
+    <div class="results-list">
+      <div *ngFor="let candidate of sortedResults()" class="candidate-result">
+        <div class="candidate-info">
+          <span class="candidate-name">{{ candidate.nome }}</span>
+          <span class="candidate-votes">{{ candidate.votos }} votos</span>
+        </div>
+        <div class="progress-bar">
+          <div class="progress" [style.width.%]="calculatePercentage(candidate.votos)"></div>
+        </div>
+        <div class="percentage">
+          {{ calculatePercentage(candidate.votos) }}%
+        </div>
       </div>
     </div>
   </div>

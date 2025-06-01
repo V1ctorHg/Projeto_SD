@@ -24,3 +24,6 @@ dist/
 
 # Outros
 *.env
+SD_core/
+core/
+

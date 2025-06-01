@@ -1,14 +1,43 @@
-<h2>Vote em um Candidato</h2>
+<div class="vote-container">
+  <h2>Votação</h2>
+  
+  <div *ngIf="loading" class="loading">
+    Carregando...
+  </div>
 
-<div *ngIf="candidates.length === 0">
-  Carregando candidatos...
-</div>
+  <div *ngIf="!loading">
+    <div class="form-group">
+      <label for="cpf">CPF:</label>
+      <input type="text" 
+             id="cpf"
+             [(ngModel)]="cpf"
+             (input)="onCPFInput($event)"
+             placeholder="Digite seu CPF"
+             maxlength="14">
+    </div>
 
-<div *ngFor="let candidate of candidates">
-  <div>
-    <strong>{{ candidate.name }} ({{ candidate.party }})</strong>
-    <button (click)="vote(candidate.number)">Votar</button>
+    <div class="candidates-list">
+      <h3>Candidatos Disponíveis:</h3>
+      <div *ngIf="candidates.length === 0" class="no-candidates">
+        Nenhum candidato disponível no momento.
+      </div>
+      <div *ngFor="let candidate of candidates" class="candidate-item">
+        <button (click)="selectedCandidate = candidate.id" 
+                [class.selected]="selectedCandidate === candidate.id"
+                [disabled]="!isCPFValid()">
+          {{ candidate.nome }}
+        </button>
+      </div>
+    </div>
+
+    <button (click)="submitVote()" 
+            class="submit-button" 
+            [disabled]="!isCPFValid() || !selectedCandidate">
+      Confirmar Voto
+    </button>
+
+    <div *ngIf="error" class="error-message">
+      {{ error }}
+    </div>
   </div>
 </div>
-
-<p *ngIf="message">{{ message }}</p>

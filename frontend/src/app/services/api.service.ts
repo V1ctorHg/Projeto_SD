@@ -1,23 +1,28 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
+import { environment } from '../../environments/environment';
 
 interface Candidate {
-  name: string;
-  number: number;
-  party: string;
+  id: number;
+  nome: string;
+  numero: number;
+  partido: string;
 }
 
 interface VoteResponse {
-  message: string;
+  message?: string;
+  erro?: string;
 }
 
-interface CandidateResult extends Candidate {
-  votes: number;
+interface Resultado {
+  id: number;
+  nome: string;
+  votos: number;
 }
 
 interface Results {
-  [key: string]: CandidateResult | boolean;
+  resultados: Resultado[];
   eleicaoativa: boolean;
 }
 
@@ -25,26 +30,42 @@ interface CreateElection {
   message: string;
 }
 
-@Injectable({ providedIn: 'root' })
+@Injectable({
+  providedIn: 'root'
+})
 export class ApiService {
-  private baseUrl = 'http://localhost:5000';
-  //private baseUrl = 'http://backend:5000'; //para rodar no docker
+  private apiUrl = environment.apiUrl;
+  private endpoints = environment.endpoints;
 
   constructor(private http: HttpClient) {}
 
-  getCandidates(): Observable<Candidate[]> {
-    return this.http.get<Candidate[]>(`${this.baseUrl}/candidates`);
+  // Registrar voto
+  registerVote(cpf: string, candidateId: number): Observable<VoteResponse> {
+    return this.http.post<VoteResponse>(`${this.apiUrl}${this.endpoints.votar}`, {
+      cpf: cpf,
+      candidato_id: candidateId
+    });
   }
 
-  vote(cpf: string, number: number): Observable<VoteResponse> {
-    return this.http.post<VoteResponse>(`${this.baseUrl}/vote`, { cpf, number });
-  }
-
+  // Obter resultados
   getResults(): Observable<Results> {
-    return this.http.get<Results>(`${this.baseUrl}/results`);
+    return this.http.get<Results>(`${this.apiUrl}${this.endpoints.resultados}`);
   }
 
-  getElectionAlternative(population: number, votes: number) {
-    return this.http.post<CreateElection>(`${this.baseUrl}/electionalternative`, { population, votes });
+  // Listar candidatos
+  getCandidates(): Observable<Candidate[]> {
+    return this.http.get<Candidate[]>(`${this.apiUrl}${this.endpoints.candidatos}`);
+  }
+
+  // Registrar eleitor (se necessário)
+  registerVoter(cpf: string, name: string): Observable<VoteResponse> {
+    return this.http.post<VoteResponse>(`${this.apiUrl}${this.endpoints.cadastrar}`, {
+      cpf: cpf,
+      nome: name
+    });
+  }
+
+  getElectionAlternative(population: number, votes: number): Observable<CreateElection> {
+    return this.http.post<CreateElection>(`${this.apiUrl}${this.endpoints.electionalternative}`, { population, votes });
   }
 }

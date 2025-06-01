@@ -4,134 +4,37 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ElectionService } from '../../services/election.service';
 import { ApiService } from '../../services/api.service';
+import { Router } from '@angular/router';
 
 interface Candidate {
-  name: string;
-  number: number;
-  party: string;
+  id: number;
+  nome: string;
+  numero: number;
+  partido: string;
 }
 
 @Component({
   selector: 'app-election-alternative',
   standalone: true,
   imports: [CommonModule, FormsModule],
-  template: `
-    <div class="container">
-      <h2>Iniciar Nova Eleição</h2>
-      
-      <div class="candidates-section">
-        <h3>Candidatos Participantes:</h3>
-        <div class="candidates-list">
-          <div *ngFor="let candidate of candidates" class="candidate-item">
-            {{ candidate.name }} - Número: {{ candidate.number }} - Partido: {{ candidate.party }}
-          </div>
-        </div>
-      </div>
-
-      <div class="form-group">
-        <label for="populacao">População Total:</label>
-        <input type="number" id="populacao" [(ngModel)]="populacao_total" class="form-control">
-      </div>
-
-      <div class="form-group">
-        <label for="cidades">Número de Cidades:</label>
-        <input type="number" id="cidades" [(ngModel)]="num_cidades" class="form-control">
-      </div>
-
-      <button (click)="startElection()" class="btn-submit">Iniciar Eleição</button>
-
-      <div *ngIf="message" class="message">
-        {{ message }}
-      </div>
-    </div>
-  `,
-  styles: [`
-    .container {
-      max-width: 600px;
-      margin: 0 auto;
-      padding: 20px;
-    }
-
-    h2, h3 {
-      text-align: center;
-      color: #333;
-      margin-bottom: 20px;
-    }
-
-    .candidates-section {
-      margin-bottom: 30px;
-      padding: 15px;
-      background: #f5f5f5;
-      border-radius: 8px;
-    }
-
-    .candidates-list {
-      margin-top: 15px;
-    }
-
-    .candidate-item {
-      padding: 10px;
-      border-bottom: 1px solid #ddd;
-      color: #444;
-    }
-
-    .candidate-item:last-child {
-      border-bottom: none;
-    }
-
-    .form-group {
-      margin-bottom: 20px;
-    }
-
-    label {
-      display: block;
-      margin-bottom: 5px;
-      color: #666;
-    }
-
-    .form-control {
-      width: 100%;
-      padding: 8px;
-      border: 1px solid #ddd;
-      border-radius: 4px;
-      font-size: 16px;
-    }
-
-    .btn-submit {
-      width: 100%;
-      padding: 10px;
-      background: #2196f3;
-      color: white;
-      border: none;
-      border-radius: 4px;
-      cursor: pointer;
-      font-size: 16px;
-      margin-top: 20px;
-    }
-
-    .btn-submit:hover {
-      background: #1976d2;
-    }
-
-    .message {
-      margin-top: 20px;
-      padding: 10px;
-      border-radius: 4px;
-      text-align: center;
-      background: #e8f5e9;
-      color: #2e7d32;
-    }
-  `]
+  templateUrl: './electionalternative.component.html',
+  styleUrls: ['./electionalternative.component.css']
 })
 export class ElectionAlternativeComponent implements OnInit {
   message: string = '';
   populacao_total: number = 0;
   num_cidades: number = 0;
   candidates: Candidate[] = [];
+  population: number = 0;
+  votes: number = 0;
+  loading = false;
+  error: string | null = null;
+  success: string | null = null;
 
   constructor(
     private electionService: ElectionService,
-    private apiService: ApiService
+    private apiService: ApiService,
+    private router: Router
   ) {}
 
   ngOnInit() {
@@ -171,6 +74,38 @@ export class ElectionAlternativeComponent implements OnInit {
       },
       error: (error) => {
         this.message = 'Erro ao iniciar a simulação: ' + error.message;
+      }
+    });
+  }
+
+  submitElection() {
+    if (!this.population || !this.votes) {
+      this.error = 'Por favor, preencha todos os campos.';
+      return;
+    }
+
+    if (this.votes > this.population) {
+      this.error = 'O número de votos não pode ser maior que a população.';
+      return;
+    }
+
+    this.loading = true;
+    this.error = null;
+    this.success = null;
+
+    this.apiService.getElectionAlternative(this.population, this.votes).subscribe({
+      next: (response) => {
+        this.success = response.message;
+        this.loading = false;
+        // Redirecionar para resultados após 2 segundos
+        setTimeout(() => {
+          this.router.navigate(['/results']);
+        }, 2000);
+      },
+      error: (err) => {
+        console.error('Erro ao criar eleição alternativa:', err);
+        this.error = 'Erro ao criar eleição alternativa. Por favor, tente novamente.';
+        this.loading = false;
       }
     });
   }
