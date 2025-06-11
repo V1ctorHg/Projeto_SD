@@ -1,23 +1,15 @@
 version: '3.9'
 
 services:
-  pseudo-core:
-    build: ./core
-    ports:
-      - "5001:5001"
-    volumes:
-      - ./core/Data:/app/Data
 
   backend:
     build: ./backend
     ports:
-      - "5000:5000"
-    # quando estiver com o core definido: apaga o depends_on
-    depends_on:
-      - pseudo-core
-    # coloca o endereço e porta do core no environment
+      - "5001:5001"
     environment:
-      - CORE_URL=http://pseudo-core:5001
+      - CORE_URL=http://host.docker.internal:5000  # URL para acessar o SD_core na máquina host
+    extra_hosts:
+      - "host.docker.internal:host-gateway"  # Permite que o container acesse o host
 
   frontend:
     build: ./frontend

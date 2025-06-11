@@ -7,6 +7,7 @@
 .loading {
   text-align: center;
   padding: 20px;
+  color: #666;
 }
 
 .form-group {
@@ -26,7 +27,7 @@
 }
 
 .candidates-list {
-  margin-bottom: 20px;
+  margin: 20px 0;
 }
 
 .candidates-list h3 {
@@ -42,7 +43,7 @@
 }
 
 .candidate-item {
-  margin-bottom: 10px;
+  margin: 10px 0;
 }
 
 .candidate-item button {
@@ -52,15 +53,15 @@
   border-radius: 4px;
   background: white;
   cursor: pointer;
-  transition: background-color 0.3s;
+  transition: all 0.3s;
 }
 
 .candidate-item button:hover {
-  background-color: #f0f0f0;
+  background: #f0f0f0;
 }
 
 .candidate-item button.selected {
-  background-color: #007bff;
+  background: #007bff;
   color: white;
   border-color: #0056b3;
 }
@@ -68,19 +69,37 @@
 .submit-button {
   width: 100%;
   padding: 10px;
-  background-color: #28a745;
+  background: #28a745;
   color: white;
   border: none;
   border-radius: 4px;
   cursor: pointer;
+  transition: all 0.3s;
+}
+
+.submit-button:hover {
+  background: #218838;
 }
 
 .submit-button:disabled {
-  background-color: #6c757d;
+  background: #6c757d;
   cursor: not-allowed;
 }
 
 .error-message {
   color: #dc3545;
   margin-top: 10px;
+  padding: 10px;
+  border: 1px solid #dc3545;
+  border-radius: 4px;
+  background: #f8d7da;
+}
+
+.success-message {
+  color: #28a745;
+  margin-top: 10px;
+  padding: 10px;
+  border: 1px solid #28a745;
+  border-radius: 4px;
+  background: #d4edda;
 }

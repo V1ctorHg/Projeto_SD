@@ -1,6 +1,6 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable } from '@angular/core';
-import { Observable } from 'rxjs';
+import { Observable, tap } from 'rxjs';
 import { environment } from '../../environments/environment';
 
 interface Candidate {
@@ -54,7 +54,13 @@ export class ApiService {
 
   // Listar candidatos
   getCandidates(): Observable<Candidate[]> {
-    return this.http.get<Candidate[]>(`${this.apiUrl}${this.endpoints.candidatos}`);
+    console.log('Frontend: Fazendo requisição GET para /candidatos');
+    return this.http.get<Candidate[]>(`${this.apiUrl}${this.endpoints.candidatos}`).pipe(
+      tap({
+        next: (data) => console.log('Frontend: Dados recebidos:', data),
+        error: (error) => console.error('Frontend: Erro na requisição:', error)
+      })
+    );
   }
 
   // Registrar eleitor (se necessário)

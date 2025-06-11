@@ -9,8 +9,9 @@ import numpy as np
 import time
 import os
 from eleicoesalternativo import eleicao
-from datetime import datetime
+from datetime import datetime, timedelta
 import logging
+from dateutil import parser
 
 app = Flask(__name__)
 CORS(app)
@@ -19,9 +20,13 @@ CORS(app)
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-#CORE_URL = "http://127.0.0.1:5001"  # URL do servidor fake (fake_server.py)
 
-CORE_URL = os.getenv("CORE_URL", "http://pseudo-core:5001")  #para rodar no docker
+#CORE_URL = os.getenv("CORE_URL", "http://pseudo-core:5001")  #para rodar no docker
+
+
+##CORE_URL = "http://localhost:5000"  # Rodar local
+CORE_URL = "http://host.docker.internal:5000"  # Rodar para o docker
+CACHE_DURACAO = 30  # segundos
 
 MAX_TENTATIVAS = 5
 DELAY_RETENTATIVA = 5
@@ -34,11 +39,12 @@ voto_queue = Queue()
 processando_fila = False
 
 # Cache de resultados
-resultados_cache = None
-ultima_atualizacao_cache = None
-CACHE_DURACAO = 30  # segundos
+resultados_cache = {
+    "timestamp": None,
+    "dados": None
+}
 
-#Thread para processar as eleições
+# Thread para processar as eleições
 def worker():
     while True:
         data = fila_eleicoes.get()
@@ -116,11 +122,11 @@ def eleicao_matematicamente_definida(votos_por_partido_atuais, populacao_total_d
 
 
 def processar_eleicao(data):
-            response = requests.get(f"{CORE_URL}/candidates")
+            response = requests.get(f"{CORE_URL}/candidatos")
             response.raise_for_status()
             print(f"CLIENTE: Dados recebidos: {response.json()}")
 
-            candidatos = [candidato['number'] for candidato in response.json()]
+            candidatos = [candidato['numero'] for candidato in response.json()]
             print(f"CLIENTE: Candidatos: {candidatos}")
 
             resultados_cidades = eleicao.processar_eleicao(data["num_cidades"], candidatos, data["populacao_total"])
@@ -194,102 +200,80 @@ def enviar_resultados(resultados):
 
     return 
 
-
-
-@app.route('/candidates', methods=['GET'])
-def get_candidates():
+@app.route('/votar', methods=['POST'])
+def votar():
+    """
+    Endpoint para registro de votos com validação e fila
+    """
     try:
-        response = requests.get(f"{CORE_URL}/candidates")
-        response.raise_for_status()
-        return jsonify(response.json())
-    except RequestException as e:
-        return jsonify({"error": "Erro ao obter candidatos"}), 500
-
-@app.route('/vote', methods=['POST'])
-def send_vote():
-    try:
-        data = request.json
-        if not data or 'cpf' not in data or 'number' not in data:
-            return jsonify({"error": "CPF e número do candidato são obrigatórios"}), 400
+        dados = request.json
+        cpf = dados.get('cpf')
+        candidato_id = dados.get('candidato_id')
         
-        response = requests.post(f"{CORE_URL}/vote", json=data)
-        response.raise_for_status()
-        return jsonify(response.json())
-    except RequestException as e:
-        return jsonify({"error": "Erro ao processar voto"}), 500
+        # Validação local
+        valido, mensagem = validar_voto(cpf, candidato_id)
+        if not valido:
+            return jsonify({"erro": mensagem}), 400
+        
+        # Envia para o servidor central
+        response = requests.post(
+            f"{CORE_URL}/votar",
+            json={"cpf": cpf, "candidato_id": candidato_id}
+        )
+        
+        if response.status_code == 200:
+            return jsonify(response.json()), 200
+        else:
+            return jsonify(response.json()), response.status_code
+            
+    except Exception as e:
+        logger.error(f"Erro ao processar voto: {str(e)}")
+        return jsonify({"erro": "Erro interno do servidor"}), 500
 
-@app.route('/results', methods=['GET'])
-def get_results():
+@app.route('/candidatos', methods=['GET'])
+def getCandidates():
+    """
+    Endpoint para listar candidatos
+    """
     try:
-        print("\n=== Obtendo resultados do servidor core ===")
-        response = requests.get(f"{CORE_URL}/results")
-        response.raise_for_status()  # Verifica se deu erro HTTP (404, 500 etc.)
-
-        data = response.json()  # Converte o JSON
-
-        votes = data.get("votes", [])
-        candidates = data.get("candidates", [])
-        election_data = data.get("election_data", {})
-
-        print("\n=== DEBUG RESULTADOS ===")
-        print(f"Votos carregados: {votes}")
-        print(f"Candidatos carregados: {candidates}")
-        print(f"Dados da eleição carregados: {election_data}")
-
-        # Inicializar dicionário de resultados
-        results = {}
-        for candidate in candidates:
-            candidate_number = str(candidate["number"])
-            results[candidate_number] = {
-                "name": candidate["name"],
-                "number": candidate["number"],
-                "party": candidate["party"],
-                "votes": 0
-            }
-
-        # Acumuladores auxiliares
-        votos_alternativo = {}
-        eleicao_ativa = False
-
-        # Somar votos_por_partido e verificar ativaeleicao em cada eleição
-        for eleicao in election_data.values():
-            votos = eleicao.get("votos_por_partido", {})
-            for numero_candidato, quantidade in votos.items():
-                numero_candidato = str(numero_candidato)
-                votos_alternativo[numero_candidato] = votos_alternativo.get(numero_candidato, 0) + quantidade
-
-            if eleicao.get("ativaeleicao", False):
-                eleicao_ativa = True
-
-        # Atualizar os votos no resultado
-        for numero_candidato, votos in votos_alternativo.items():
-            if numero_candidato in results:
-                results[numero_candidato]["votes"] += votos
-            else:
-                # Se o número não estiver na lista de candidatos, ainda assim registra
-                results[numero_candidato] = {
-                    "name": "Desconhecido",
-                    "number": int(numero_candidato),
-                    "party": "Desconhecido",
-                    "votes": votos
-                }
-
-        # Somar os votos normais (não alternativos)
-        for vote in votes:
-            candidate_number = str(vote["number"])
-            if candidate_number in results:
-                results[candidate_number]["votes"] += 1
-
-        # Adiciona info de eleição ativa
-        results["eleicaoativa"] = eleicao_ativa
-
-        print(f"Resultados finais: {results}")
-        print("=== FIM DEBUG ===\n")
-        print("=== Fim da requisição ===\n")
-        return jsonify(results)
-    except RequestException as e:
-        print(f"Erro ao obter resultados: {e}")
-        return jsonify({"error": "Erro ao obter resultados"}), 500
+        print("Backend: Recebendo requisição GET /candidatos")
+        response = requests.get(f"{CORE_URL}/candidatos")
+        print(f"Backend: Resposta do SD_core: {response.status_code}")
+        print(f"Backend: Dados recebidos: {response.json()}")
+        return response.json(), response.status_code
+    except requests.exceptions.RequestException as e:
+        print(f"Backend: Erro de conexão com SD_core: {str(e)}")
+        logger.error(f"Erro ao listar candidatos: {str(e)}")
+        return jsonify({"erro": "Erro ao conectar com o servidor central"}), 500
+    except Exception as e:
+        print(f"Backend: Erro ao listar candidatos: {str(e)}")
+        logger.error(f"Erro ao listar candidatos: {str(e)}")
+        return jsonify({"erro": "Erro interno do servidor"}), 500
+    
+@app.route('/resultados', methods=['GET'])
+def resultados():
+    """
+    Endpoint para obter resultados com cache
+    """
+    try:
+        # Verifica se o cache está válido
+        agora = datetime.now()
+        if (resultados_cache["timestamp"] and 
+            agora - resultados_cache["timestamp"] < timedelta(seconds=CACHE_DURACAO)):
+            return jsonify(resultados_cache["dados"])
+            
+        # Se não estiver válido, busca do servidor central
+        response = requests.get(f"{CORE_URL}/resultados")
+        if response.status_code == 200:
+            resultados_cache["dados"] = response.json()
+            resultados_cache["timestamp"] = agora
+            return jsonify(resultados_cache["dados"])
+        else:
+            return jsonify({"erro": "Erro ao buscar resultados"}), 500
+            
+    except Exception as e:
+        logger.error(f"Erro ao buscar resultados: {str(e)}")
+        return jsonify({"erro": "Erro interno do servidor"}), 500
 
 @app.route('/electionalternative', methods =['POST'])
 def electionalternative():
@@ -308,12 +292,21 @@ def validar_voto(cpf, candidato_id):
     """
     Implementa validações adicionais antes de enviar para o servidor central
     """
-    # Exemplo de validações adicionais
+    # Validações básicas
     if not cpf or not candidato_id:
         return False, "CPF e ID do candidato são obrigatórios"
     
-    # Aqui você pode adicionar mais validações
-    # Por exemplo: verificar se o eleitor já votou, se está no horário permitido, etc.
+    # Validação de CPF já votou
+    try:
+        response = requests.get(f"{CORE_URL}/eleitor/{cpf}")
+        if response.status_code == 200:
+            eleitor = response.json()
+            if eleitor.get('votou'):
+                return False, "CPF já votou"
+    except Exception as e:
+        logger.error(f"Erro ao verificar CPF: {str(e)}")
+        # Em caso de erro na verificação, permite o voto seguir para o servidor central
+        # que fará a validação final
     
     return True, None
 
@@ -350,69 +343,6 @@ def processar_fila():
 # Inicia o processamento da fila em background
 threading.Thread(target=processar_fila, daemon=True).start()
 
-@app.route('/votar', methods=['POST'])
-def votar():
-    """
-    Endpoint para registro de votos com validação e fila
-    """
-    try:
-        dados = request.json
-        cpf = dados.get('cpf')
-        candidato_id = dados.get('candidato_id')
-        
-        # Validação local
-        valido, mensagem = validar_voto(cpf, candidato_id)
-        if not valido:
-            return jsonify({"erro": mensagem}), 400
-        
-        # Adiciona à fila
-        voto_queue.put(dados)
-        
-        return jsonify({"message": "Voto recebido e será processado"}), 202
-        
-    except Exception as e:
-        logger.error(f"Erro ao processar voto: {str(e)}")
-        return jsonify({"erro": "Erro interno do servidor"}), 500
-
-@app.route('/resultados', methods=['GET'])
-def resultados():
-    """
-    Endpoint para obter resultados com cache
-    """
-    global resultados_cache, ultima_atualizacao_cache
-    
-    try:
-        # Verifica se o cache é válido
-        agora = datetime.now()
-        if (resultados_cache is None or 
-            ultima_atualizacao_cache is None or 
-            (agora - ultima_atualizacao_cache).seconds > CACHE_DURACAO):
-            
-            # Atualiza cache
-            response = requests.get(f"{CORE_URL}/resultados")
-            if response.status_code == 200:
-                resultados_cache = response.json()
-                ultima_atualizacao_cache = agora
-            else:
-                return jsonify({"erro": "Erro ao obter resultados"}), 500
-        
-        return jsonify(resultados_cache)
-        
-    except Exception as e:
-        logger.error(f"Erro ao obter resultados: {str(e)}")
-        return jsonify({"erro": "Erro interno do servidor"}), 500
-
-@app.route('/candidatos', methods=['GET'])
-def candidatos():
-    """
-    Endpoint para listar candidatos
-    """
-    try:
-        response = requests.get(f"{CORE_URL}/candidates")
-        return response.json(), response.status_code
-    except Exception as e:
-        logger.error(f"Erro ao listar candidatos: {str(e)}")
-        return jsonify({"erro": "Erro interno do servidor"}), 500
 
 @app.route('/cadastrar', methods=['POST'])
 def cadastrar():
@@ -444,5 +374,17 @@ def election_alternative():
         logger.error(f"Erro ao configurar eleição alternativa: {str(e)}")
         return jsonify({"erro": "Erro interno do servidor"}), 500
 
+@app.route('/eleitor/<cpf>', methods=['GET'])
+def verificar_eleitor(cpf):
+    """
+    Endpoint para verificar status do eleitor
+    """
+    try:
+        response = requests.get(f"{CORE_URL}/eleitor/{cpf}")
+        return response.json(), response.status_code
+    except Exception as e:
+        logger.error(f"Erro ao verificar eleitor: {str(e)}")
+        return jsonify({"erro": "Erro ao verificar eleitor"}), 500
+
 if __name__ == "__main__":
-    waitress.serve(app, host='0.0.0.0', port=5000, threads=32)
+    waitress.serve(app, host='0.0.0.0', port=5001, threads=32)

@@ -1,7 +1,8 @@
-Flask==2.0.1
-flask-cors==3.0.10
-requests==2.26.0
+flask==2.3.3
+werkzeug==2.3.7
+flask-cors==4.0.0
+requests==2.31.0
 python-dateutil==2.8.2
-waitress==2.0.0
+waitress==2.1.2
 numpy
 matplotlib
