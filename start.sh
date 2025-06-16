@@ -1,5 +1,5 @@
 #!/bin/bash
-echo "👉 Rebuildando tudo sem cache..."
+echo "Rebuildando tudo sem cache..."
 docker-compose build --no-cache
-echo "🚀 Subindo containers..."
+echo "Subindo containers..."
 docker-compose up

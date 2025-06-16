@@ -1,15 +1,43 @@
-version: '3.9'
-
 services:
+  zookeeper:
+    image: wurstmeister/zookeeper
+    container_name: zookeeper
+    ports:
+      - "2181:2181"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "echo", "ruok", "|", "nc", "localhost", "2181"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  kafka:
+    image: wurstmeister/kafka
+    container_name: kafka
+    ports:
+      - "9092:9092"
+    environment:
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092
+      KAFKA_LOG_RETENTION_HOURS: 1
+    depends_on:
+      - zookeeper
+    restart: unless-stopped
 
   backend:
     build: ./backend
     ports:
       - "5001:5001"
     environment:
-      - CORE_URL=http://host.docker.internal:5000  # URL para acessar o SD_core na máquina host
+      - CORE_URL=http://host.docker.internal:5000
+      - KAFKA_BROKER=kafka:9092
     extra_hosts:
-      - "host.docker.internal:host-gateway"  # Permite que o container acesse o host
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      - kafka
+    restart: unless-stopped
 
   frontend:
     build: ./frontend
@@ -17,3 +45,4 @@ services:
       - "4200:80"
     depends_on:
       - backend
+    restart: unless-stopped

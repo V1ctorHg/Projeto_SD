@@ -1,10 +1,7 @@
 from random import normalvariate, random, randint, gauss, uniform, sample
-from time import sleep
 import matplotlib
 matplotlib.use('Agg')  # Configurar o backend Agg para evitar problemas com threads
-import matplotlib.pyplot as plt
 import numpy as np
-import math
 
 
 class eleicao:
@@ -278,7 +275,3 @@ class eleicao:
         
             
         return resultados_cidades
-    
-    
-
-

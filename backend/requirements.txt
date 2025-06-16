@@ -6,3 +6,5 @@ python-dateutil==2.8.2
 waitress==2.1.2
 numpy
 matplotlib
+kafka-python
+python-dateutil

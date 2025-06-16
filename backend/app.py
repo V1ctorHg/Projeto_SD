@@ -3,25 +3,30 @@ from flask_cors import CORS # type: ignore
 import waitress
 import requests
 import threading
-from queue import Queue
 from requests.exceptions import RequestException
-import numpy as np
 import time
 import os
 from eleicoesalternativo import eleicao
 from datetime import datetime, timedelta
 import logging
 from dateutil import parser
+from kafka import KafkaProducer, KafkaConsumer
+import json
+import random
+import sys
+
+
 
 app = Flask(__name__)
 CORS(app)
 
 # Configuração do logging
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s %(levelname)s %(message)s",
+    handlers=[logging.StreamHandler(sys.stdout)]
+)
 logger = logging.getLogger(__name__)
-
-
-#CORE_URL = os.getenv("CORE_URL", "http://pseudo-core:5001")  #para rodar no docker
 
 
 ##CORE_URL = "http://localhost:5000"  # Rodar local
@@ -31,12 +36,112 @@ CACHE_DURACAO = 30  # segundos
 MAX_TENTATIVAS = 5
 DELAY_RETENTATIVA = 5
 
-#Fila de mensagens (só para as eleições)
-fila_eleicoes = Queue()
 
-# Fila de votos
-voto_queue = Queue()
-processando_fila = False
+BUFFER_VOTOS = []
+LOCK = threading.Lock() #seção crítica
+
+MAX_BUFFER = 500 #max de votos no buffer
+INTERVALO_ENVIO = 2 #max de segundos
+
+def adicionar_voto_buffer(voto):
+    with LOCK:
+        BUFFER_VOTOS.append(voto)
+        logger.info(f"{BUFFER_VOTOS}")
+        if len(BUFFER_VOTOS) >= MAX_BUFFER:
+            logger.info("Lote cheio, eviando imediatamente")
+            enviar_lote()
+
+
+def enviar_lote():
+    global BUFFER_VOTOS
+    with LOCK:
+        if not BUFFER_VOTOS:
+            return
+        lote = BUFFER_VOTOS.copy()
+        BUFFER_VOTOS.clear()
+        logger.info(f"Enviando lote de {len(lote)} votos para o core")
+
+    # Processar em paralelo para acelerar
+    def enviar_voto_individual(voto):
+        try:
+            response = requests.post(f"{CORE_URL}/votar", json=voto)
+            response.raise_for_status()
+            logger.debug(f"Voto enviado: {voto['cpf']}")
+        except Exception as e:
+            logger.error(f"Erro ao enviar voto: {e}")
+            # Re-adiciona ao buffer em caso de erro
+            with LOCK:
+                BUFFER_VOTOS.append(voto)
+
+    # Criar threads para enviar votos em paralelo
+    threads = []
+    for voto in lote:
+        thread = threading.Thread(target=enviar_voto_individual, args=(voto,))
+        threads.append(thread)
+        thread.start()
+        
+        # Limitar a 50 threads simultâneas para não sobrecarregar
+        if len(threads) >= 50:
+            for t in threads:
+                t.join()
+            threads = []
+    
+    # Aguardar threads restantes
+    for thread in threads:
+        thread.join()
+    
+    logger.info(f"Lote de {len(lote)} votos processado com sucesso")
+
+def iniciar_envio_periodico():
+    def loop():
+        while True:
+            time.sleep(INTERVALO_ENVIO)
+            enviar_lote()
+    threading.Thread(target=loop, daemon=True).start()
+
+iniciar_envio_periodico() #enviando um lote a cada 2 seg
+
+
+producer = KafkaProducer(
+    bootstrap_servers=os.getenv("KAFKA_BROKER", "localhost:9092"),
+    value_serializer=lambda v: json.dumps(v).encode('utf-8')
+)
+
+
+def consumidor_loop():
+    consumer = KafkaConsumer(
+        'votos',
+        bootstrap_servers=os.getenv("KAFKA_BROKER", "localhost:9092"),
+        value_deserializer=lambda m: json.loads(m.decode('utf-8')),
+        auto_offset_reset='earliest',
+        enable_auto_commit=True,
+        max_poll_records=500,  # Consumir até 500 mensagens por vez
+        fetch_max_wait_ms=100  # Reduzir tempo de espera
+    )
+
+    ultimo_envio = time.time()
+
+    for mensagem in consumer:
+        voto = mensagem.value
+        logger.debug(f"Voto consumido do Kafka: {voto['cpf']}")  # Mudei para debug para reduzir logs
+
+        with LOCK:
+            BUFFER_VOTOS.append(voto)
+
+        agora = time.time()
+        tempo_passado = agora - ultimo_envio
+        buffer_cheio = len(BUFFER_VOTOS) >= MAX_BUFFER
+        tempo_excedido = tempo_passado >= INTERVALO_ENVIO
+
+        if buffer_cheio or tempo_excedido:
+            logger.info(f"Enviando lote: {len(BUFFER_VOTOS)} votos (motivo: {'buffer cheio' if buffer_cheio else 'tempo excedido'})")
+            enviar_lote()
+            ultimo_envio = time.time()
+
+
+
+threading.Thread(target=consumidor_loop, daemon=True).start()
+
 
 # Cache de resultados
 resultados_cache = {
@@ -44,191 +149,65 @@ resultados_cache = {
     "dados": None
 }
 
-# Thread para processar as eleições
-def worker():
-    while True:
-        data = fila_eleicoes.get()
-        print(f"Fila de eleições: {fila_eleicoes}")
-        if data is None:
-            break
-        processar_eleicao(data)
-        fila_eleicoes.task_done()
-
-threading.Thread(target=worker, daemon=True).start()
-
-#Eleicao alternativa
-def espera_resultados(populacao):
-    # Base: 0.1 microssegundo por pessoa
-    tempo_base = populacao * 0.0001  
-    
-    # Limita o máximo em 25 segundos para não ficar muito longo
-    tempo_maximo = 25000  # 25 segundos em milissegundos
-    
-    # Usa logaritmo para suavizar o crescimento com populações muito grandes
-    tempo_ms = min(tempo_maximo, tempo_base)
-    
-    return tempo_ms/1000  # retorna em segundos
-
-def eleicao_matematicamente_definida(votos_por_partido_atuais, populacao_total_da_eleicao, total_eleitores_ja_processados):
-    """
-    Verifica se a eleição está matematicamente definida, considerando que todos os 
-    eleitores ainda não processados votariam no segundo colocado.
-
-    Args:
-        votos_por_partido_atuais (dict): Dicionário com os votos atuais de cada partido.
-        populacao_total_da_eleicao (int): Número total de eleitores aptos na eleição.
-        total_eleitores_ja_processados (int): Soma dos eleitores das áreas já apuradas.
-
-    Returns:
-        tuple: (bool, str or None) indicando (True se definida, nome do vencedor) 
-            ou (False se não definida, None).
-    """
-
-    if not votos_por_partido_atuais:
-        return False, None # Não há dados de votos
-
-    # Calcula os eleitores restantes que ainda podem, hipoteticamente, votar.
-    eleitores_potenciais_restantes = populacao_total_da_eleicao - total_eleitores_ja_processados
-    
-    # Garante que não seja negativo (caso total_eleitores_ja_processados exceda por algum motivo)
-    if eleitores_potenciais_restantes < 0:
-        eleitores_potenciais_restantes = 0
-
-    # Ordena para pegar líder e segundo
-    partidos_ordenados = sorted(votos_por_partido_atuais.items(), key=lambda item: item[1], reverse=True)
-    
-    lider_atual_nome, votos_lider_atual = partidos_ordenados[0]
-
-    # Se só tem um partido na lista (ou com votos)
-    if len(partidos_ordenados) == 1:
-        # Ele ganha se seus votos superam os eleitores restantes 
-        # (considerando que esses eleitores poderiam formar um novo partido e votar nele),
-        # ou se não há mais eleitores restantes.
-        if votos_lider_atual > eleitores_potenciais_restantes or eleitores_potenciais_restantes == 0:
-            return True, lider_atual_nome
-        return False, None # Ainda pode ser ultrapassado por um "novo" concorrente com os eleitores restantes
-
-    # Se tem mais de um, pega o segundo colocado
-    _, votos_segundo_colocado = partidos_ordenados[1]
-    
-    diferenca_para_segundo = votos_lider_atual - votos_segundo_colocado
-    
-    # Se a diferença já é maior que todos os eleitores que faltam ser processados
-    # (assumindo que todos eles votariam no segundo colocado), está definido.
-    if diferenca_para_segundo > eleitores_potenciais_restantes:
-        return True, lider_atual_nome
-        
-    return False, None # Caso contrário, não está definido  
-
 
 def processar_eleicao(data):
+            #try except aqui depois
             response = requests.get(f"{CORE_URL}/candidatos")
             response.raise_for_status()
-            print(f"CLIENTE: Dados recebidos: {response.json()}")
+            logger.info(f"CLIENTE: Dados recebidos: {response.json()}")
 
-            candidatos = [candidato['numero'] for candidato in response.json()]
-            print(f"CLIENTE: Candidatos: {candidatos}")
+            candidatos = [candidato['id'] for candidato in response.json()]
+            logger.info(f"CLIENTE: Candidatos: {candidatos}")
 
             resultados_cidades = eleicao.processar_eleicao(data["num_cidades"], candidatos, data["populacao_total"])
             enviar_resultados(resultados_cidades)
 
 def enviar_resultados(resultados):
-    """
-    Envia os resultados da eleição para o servidor.
-                
-    Args:
-        resultados: Lista de dicionários com os resultados de cada cidade
-    """
-    eleicaoativa = True
-
-    totalpopulacao = 0
-    totalvotos = 0
-    votos_por_partido = {}
-    serialdaeleicao = None
     i = 0
+    total_votos_enviados = 0
 
     for cidade in resultados:
-    
         jsonparcial = {
-            "total_populacao": cidade["populacao"],
-            "total_votos": cidade["total_votos"],
-            "votos_por_partido": cidade["votos_por_partido"],
-            "eleicaoativa": eleicaoativa
+            "votos_por_partido": cidade["votos_por_partido"]
         }
-        
-        totalpopulacao += jsonparcial["total_populacao"]
-        totalvotos += jsonparcial["total_votos"]
         
         for partido, votos in jsonparcial["votos_por_partido"].items():
-            votos_por_partido[partido] = votos_por_partido.get(partido, 0) + votos
-        ativaeleicao = jsonparcial["eleicaoativa"]
-        if totalpopulacao == cidade["totalpossiveiseleitores"]:
-            ativaeleicao = False
-       
-
-        json_eleicao = {
-            "electionpart": i,
-            "serialeleicao": serialdaeleicao,
-            "totalpopulacao": totalpopulacao,
-            "totalvotos": totalvotos,
-            "votos_por_partido": votos_por_partido,
-            "ativaeleicao": ativaeleicao,
-            "totalpossiveiseleitores": cidade["totalpossiveiseleitores"],
-            #depois colocar aqui o usuário que solicitou a eleição e o timestamp
-        }
-
-         # Envia este JSON para o servidor Flask, tentando até MAX_TENTATIVAS vezes
-        for tentativa in range(MAX_TENTATIVAS):
-            try:
-                core = (f"{CORE_URL}/electionalternative")
-                resposta_servidor = requests.post(core, json=json_eleicao, timeout=10)
-                resposta_servidor.raise_for_status() # Verifica se houve erro HTTP (4xx ou 5xx)
-                print(f"CLIENTE: Iteração {i}: JSON enviado. Servidor respondeu: {resposta_servidor.json().get('message')}")
-                serialdaeleicao = resposta_servidor.json().get('serialeleicao')
-                #time.sleep(0.2)
-                break
-            except requests.exceptions.RequestException as e:
-                print(f"CLIENTE: Iteração {i}: Falha ao enviar JSON para o servidor. Erro: {e}")
-                if tentativa < MAX_TENTATIVAS - 1:
-                    time.sleep(DELAY_RETENTATIVA)
-                else:
-                    print(f"CLIENTE: Iteração {i}: Falha após {MAX_TENTATIVAS} tentativas. Retornando erro.")
-                    return jsonify({"error": "Erro ao enviar dados para o servidor"}), 500
+            for _ in range(votos):  
+                cpf = f"{random.randint(0, 99999999999):011d}"
+                json_eleicao = {
+                    "cpf": cpf,
+                    "candidato_id": partido
+                }
+                
+                producer.send("votos", json_eleicao)
+                total_votos_enviados += 1
+            
+            logger.info(f"Enviados {votos} votos para o partido {partido}")
 
         i += 1
-        time.sleep(espera_resultados(cidade["populacao"]))
+    
+    logger.info(f"Total de votos enviados: {total_votos_enviados}")
 
-    return 
 
 @app.route('/votar', methods=['POST'])
-def votar():
-    """
-    Endpoint para registro de votos com validação e fila
-    """
+def votar(dados=None):
     try:
-        dados = request.json
+        if not dados:
+            dados = request.json
         cpf = dados.get('cpf')
         candidato_id = dados.get('candidato_id')
-        
-        # Validação local
+
         valido, mensagem = validar_voto(cpf, candidato_id)
         if not valido:
             return jsonify({"erro": mensagem}), 400
-        
-        # Envia para o servidor central
-        response = requests.post(
-            f"{CORE_URL}/votar",
-            json={"cpf": cpf, "candidato_id": candidato_id}
-        )
-        
-        if response.status_code == 200:
-            return jsonify(response.json()), 200
-        else:
-            return jsonify(response.json()), response.status_code
-            
+
+        producer.send("votos", {"cpf": cpf, "candidato_id": candidato_id})
+        return jsonify({"status": "Voto enviado para fila Kafka"}), 200
+
     except Exception as e:
-        logger.error(f"Erro ao processar voto: {str(e)}")
+        logger.info(f"Erro ao processar voto: {str(e)}")
         return jsonify({"erro": "Erro interno do servidor"}), 500
+    
 
 @app.route('/candidatos', methods=['GET'])
 def getCandidates():
@@ -236,18 +215,18 @@ def getCandidates():
     Endpoint para listar candidatos
     """
     try:
-        print("Backend: Recebendo requisição GET /candidatos")
+        logger.info("Backend: Recebendo requisição GET /candidatos")
         response = requests.get(f"{CORE_URL}/candidatos")
-        print(f"Backend: Resposta do SD_core: {response.status_code}")
-        print(f"Backend: Dados recebidos: {response.json()}")
+        logger.info(f"Backend: Resposta do SD_core: {response.status_code}")
+        logger.info(f"Backend: Dados recebidos: {response.json()}")
         return response.json(), response.status_code
     except requests.exceptions.RequestException as e:
-        print(f"Backend: Erro de conexão com SD_core: {str(e)}")
-        logger.error(f"Erro ao listar candidatos: {str(e)}")
+        logger.info(f"Backend: Erro de conexão com SD_core: {str(e)}")
+        logger.info(f"Erro ao listar candidatos: {str(e)}")
         return jsonify({"erro": "Erro ao conectar com o servidor central"}), 500
     except Exception as e:
-        print(f"Backend: Erro ao listar candidatos: {str(e)}")
-        logger.error(f"Erro ao listar candidatos: {str(e)}")
+        logger.info(f"Backend: Erro ao listar candidatos: {str(e)}")
+        logger.info(f"Erro ao listar candidatos: {str(e)}")
         return jsonify({"erro": "Erro interno do servidor"}), 500
     
 @app.route('/resultados', methods=['GET'])
@@ -272,16 +251,17 @@ def resultados():
             return jsonify({"erro": "Erro ao buscar resultados"}), 500
             
     except Exception as e:
-        logger.error(f"Erro ao buscar resultados: {str(e)}")
+        logger.info(f"Erro ao buscar resultados: {str(e)}")
         return jsonify({"erro": "Erro interno do servidor"}), 500
 
-@app.route('/electionalternative', methods =['POST'])
+
+#Quando for fazer a simulação de eleição com muitos votos, integrar à rota \votar
+@app.route('/electionalternative', methods =['POST', 'GET'])
 def electionalternative():
     if request.method == 'POST':
         data = request.json
-        print(f"Dados recebidos: {data}")
-
-        fila_eleicoes.put(data)
+        logger.info(f"Dados recebidos: {data}")
+        threading.Thread(target=processar_eleicao, args=(data,), daemon=True).start()
         return jsonify({"message": "Parte da eleição colocada na fila"})
     
 @app.route('/')
@@ -304,44 +284,12 @@ def validar_voto(cpf, candidato_id):
             if eleitor.get('votou'):
                 return False, "CPF já votou"
     except Exception as e:
-        logger.error(f"Erro ao verificar CPF: {str(e)}")
+        logger.info(f"Erro ao verificar CPF: {str(e)}")
         # Em caso de erro na verificação, permite o voto seguir para o servidor central
         # que fará a validação final
     
     return True, None
 
-def processar_fila():
-    """
-    Processa a fila de votos em background
-    """
-    global processando_fila
-    
-    while True:
-        if not voto_queue.empty():
-            try:
-                voto = voto_queue.get()
-                # Tenta enviar para o servidor central
-                response = requests.post(
-                    f"{CORE_URL}/votar",
-                    json=voto
-                )
-                
-                if response.status_code == 200:
-                    logger.info(f"Voto processado com sucesso: {voto}")
-                else:
-                    # Se falhar, coloca de volta na fila
-                    voto_queue.put(voto)
-                    logger.error(f"Erro ao processar voto: {response.text}")
-                
-            except Exception as e:
-                logger.error(f"Erro ao processar voto: {str(e)}")
-                # Coloca de volta na fila em caso de erro
-                voto_queue.put(voto)
-        
-        time.sleep(1)  # Evita consumo excessivo de CPU
-
-# Inicia o processamento da fila em background
-threading.Thread(target=processar_fila, daemon=True).start()
 
 
 @app.route('/cadastrar', methods=['POST'])
@@ -356,23 +304,10 @@ def cadastrar():
         )
         return response.json(), response.status_code
     except Exception as e:
-        logger.error(f"Erro ao cadastrar eleitor: {str(e)}")
+        logger.info(f"Erro ao cadastrar eleitor: {str(e)}")
         return jsonify({"erro": "Erro interno do servidor"}), 500
 
-@app.route('/electionalternative', methods=['POST'])
-def election_alternative():
-    """
-    Endpoint para configuração alternativa de eleição
-    """
-    try:
-        response = requests.post(
-            f"{CORE_URL}/electionalternative",
-            json=request.json
-        )
-        return response.json(), response.status_code
-    except Exception as e:
-        logger.error(f"Erro ao configurar eleição alternativa: {str(e)}")
-        return jsonify({"erro": "Erro interno do servidor"}), 500
+
 
 @app.route('/eleitor/<cpf>', methods=['GET'])
 def verificar_eleitor(cpf):
@@ -383,7 +318,7 @@ def verificar_eleitor(cpf):
         response = requests.get(f"{CORE_URL}/eleitor/{cpf}")
         return response.json(), response.status_code
     except Exception as e:
-        logger.error(f"Erro ao verificar eleitor: {str(e)}")
+        logger.info(f"Erro ao verificar eleitor: {str(e)}")
         return jsonify({"erro": "Erro ao verificar eleitor"}), 500
 
 if __name__ == "__main__":
