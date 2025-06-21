@@ -58,23 +58,18 @@ Antes de iniciar, crie um arquivo chamado `.env` na raiz do projeto, baseado no 
 
 **`.env.example`**:
 ```env
-# === CONFIGURAÇÃO PADRÃO PARA RODAR COM RABBITMQ DO CORE LOCAL (EM OUTRO CONTAINER) ===
-RABBITMQ_HOST=rabbitmq_service  # Nome do container do RabbitMQ (deve estar na mesma rede "rede")
-RABBITMQ_PORT=5672
-RABBITMQ_USERNAME=guest
-RABBITMQ_PASSWORD=guest
-
-# === OU: CONFIGURAÇÃO PARA RODAR COM RABBITMQ DE OUTRO PC ===
-# RABBITMQ_HOST=192.168.1.100  # IP do servidor do core (ou RabbitMQ remoto)
-# RABBITMQ_PORT=5672
-# RABBITMQ_USERNAME=guest
-# RABBITMQ_PASSWORD=guest
+# === CONFIGURAÇÃO PARA RODAR COM RABBITMQ DE OUTRO PC ===
+RABBITMQ_HOST=chimpanzee.rmq.cloudamqp.com
+RABBITMQ_PORT=5671
+RABBITMQ_USERNAME=edxgujmk
+RABBITMQ_PASSWORD=Wm1vy2ea99LIfZh-ZZyl3DhWlLDlNcdH
+RABBITMQ_VIRTUAL_HOST=edxgujmk
 
 # === NOME DA FILA PADRÃO ===
 RABBITMQ_QUEUE=lotes_de_dados
 
 # === ENDEREÇO DO CORE/AGREGADOR (backend vai buscar resultados aqui) ===
-CORE_URL=http://agregador_node_app:8080  # ou http://192.168.1.100:8080 se estiver remoto
+CORE_URL=https://agregador-node.onrender.com
 
 ```
 
