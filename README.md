@@ -8,10 +8,10 @@ A arquitetura de desenvolvimento local segue o seguinte fluxo:
 
 ```mermaid
 graph TD;
-    Usuario[👤 Usuário] -->|Vota em| Frontend;
-    Frontend[🌐 Frontend Angular] -->|Envia voto via API| Backend;
-    Backend[🐍 Backend Flask] -->|Publica mensagem| RabbitMQ;
-    RabbitMQ[🐇 RabbitMQ] -->|Consumido por| AggregatorNode[⚙️ Aggregator Node (Externo)];
+    Usuario["👤 Usuário"] -->|"Vota em"| Frontend;
+    Frontend["🌐 Frontend Angular"] -->|"Envia voto via API"| Backend;
+    Backend["🐍 Backend Flask"] -->|"Publica mensagem"| RabbitMQ;
+    RabbitMQ["🐇 RabbitMQ"] -->|"Consumido por"| AggregatorNode["⚙️ Aggregator Node (Externo)"];
 ```
 
 **Nota sobre Kubernetes:** A arquitetura alvo para produção no Kubernetes pretende substituir o RabbitMQ por Kafka. No entanto, a implementação atual do backend **não é compatível** com essa configuração, tornando o desdobramento via Kubernetes não funcional no momento.
@@ -58,15 +58,24 @@ Antes de iniciar, crie um arquivo chamado `.env` na raiz do projeto, baseado no 
 
 **`.env.example`**:
 ```env
-# URL do nó agregador que recebe os dados
-CORE_URL=http://<IP_OU_HOSTNAME_DO_AGREGADOR>:8080
-
-# Detalhes de conexão do RabbitMQ
-RABBITMQ_HOST=<IP_OU_HOSTNAME_DO_RABBITMQ>
+# === CONFIGURAÇÃO PADRÃO PARA RODAR COM RABBITMQ DO CORE LOCAL (EM OUTRO CONTAINER) ===
+RABBITMQ_HOST=rabbitmq_service  # Nome do container do RabbitMQ (deve estar na mesma rede "rede")
 RABBITMQ_PORT=5672
 RABBITMQ_USERNAME=guest
 RABBITMQ_PASSWORD=guest
+
+# === OU: CONFIGURAÇÃO PARA RODAR COM RABBITMQ DE OUTRO PC ===
+# RABBITMQ_HOST=192.168.1.100  # IP do servidor do core (ou RabbitMQ remoto)
+# RABBITMQ_PORT=5672
+# RABBITMQ_USERNAME=guest
+# RABBITMQ_PASSWORD=guest
+
+# === NOME DA FILA PADRÃO ===
 RABBITMQ_QUEUE=lotes_de_dados
+
+# === ENDEREÇO DO CORE/AGREGADOR (backend vai buscar resultados aqui) ===
+CORE_URL=http://agregador_node_app:8080  # ou http://192.168.1.100:8080 se estiver remoto
+
 ```
 
 ### ▶️ Iniciando a Aplicação
