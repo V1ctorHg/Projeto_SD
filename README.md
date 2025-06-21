@@ -1,6 +1,30 @@
 # 🗳️ Sistema de Votação Distribuído
 
-Este projeto simula um sistema de votação distribuído, com múltiplos nós coletores (clientes) que enviam dados para um nó agregador (servidor central). O foco deste repositório está no desenvolvimento da **interface de votação (front-end)** e do **cliente back-end responsável por comunicar-se com o servidor central**.
+Este projeto implementa um cliente para um sistema de votação distribuído. Ele consiste em uma interface de usuário (frontend) para registrar votos e uma aplicação de retaguarda (backend) que envia esses votos para um nó agregador central para processamento.
+
+## 🏛️ Arquitetura
+
+A arquitetura de desenvolvimento local segue o seguinte fluxo:
+
+```mermaid
+graph TD;
+    Usuario[👤 Usuário] -->|Vota em| Frontend;
+    Frontend[🌐 Frontend Angular] -->|Envia voto via API| Backend;
+    Backend[🐍 Backend Flask] -->|Publica mensagem| RabbitMQ;
+    RabbitMQ[🐇 RabbitMQ] -->|Consumido por| AggregatorNode[⚙️ Aggregator Node (Externo)];
+```
+
+**Nota sobre Kubernetes:** A arquitetura alvo para produção no Kubernetes pretende substituir o RabbitMQ por Kafka. No entanto, a implementação atual do backend **não é compatível** com essa configuração, tornando o desdobramento via Kubernetes não funcional no momento.
+
+---
+
+## ✨ Tecnologias Principais
+
+- **Frontend:** Angular
+- **Backend:** Python (Flask)
+- **Mensageria:** RabbitMQ (para Docker) / Kafka (alvo para K8s)
+- **Containerização:** Docker, Docker Compose
+- **Orquestração:** Kubernetes
 
 ---
 
@@ -8,216 +32,102 @@ Este projeto simula um sistema de votação distribuído, com múltiplos nós co
 
 ```
 /
-├── front-end/      # Interface do usuário em Angular
-└── back-end/       # Cliente Flask que envia dados ao agregador
-```
-
-
----
-
-## 🔧 Pré-requisitos
-
-- Node.js (v16+)
-- Angular CLI (`npm install -g @angular/cli`)
-- Python 3.8+
-- `pip` instalado
-
----
-
-## 🖥️ Front-end (Angular)
-
-### 📦 Instalação
-
-```bash
-cd front-end/
-npm install
-```
-
-### 🚀 Execução
-
-```bash
-ng serve
-```
-
-Acesse no navegador:
-
-```
-http://localhost:4200
-```
-
-### 🔄 Atualizar o projeto com mudanças do Git
-
-```bash
-git pull
+├── frontend/       # Aplicação Frontend em Angular
+├── backend/        # Aplicação Backend em Python (Flask)
+├── k8s/            # Manifestos de desdobramento para Kubernetes
+├── docker-compose.yml # Orquestração dos serviços para ambiente local
+├── start.sh        # Script para construir e iniciar containers (Docker)
+├── stop.sh         # Script para parar e limpar containers (Docker)
+└── deploy-k8s.sh   # Script para desdobrar a aplicação no Kubernetes (atualmente não funcional)
 ```
 
 ---
 
-## 🧠 Back-end (Flask - Cliente)
+## 🚀 Executando com Docker (Método Recomendado e Funcional)
 
-### 📦 Criar e ativar ambiente virtual
+Esta é a **única** forma garantida para executar o projeto corretamente.
 
-```bash
-cd back-end/
-python -m venv venv
+### ✅ Pré-requisitos
+- [Docker Desktop](https://www.docker.com/products/docker-desktop/) ou Docker Engine/Compose para Linux.
+- Acesso a uma instância do **Nó Agregador** e do **RabbitMQ**. Esses serviços podem estar:
+  - Rodando localmente em uma rede Docker externa (ex: `rede`).
+  - Acessíveis remotamente através de um endereço IP ou hostname. **(Este é o cenário alvo para produção)**
+
+### ⚙️ Configuração
+Antes de iniciar, crie um arquivo chamado `.env` na raiz do projeto, baseado no exemplo abaixo. Este arquivo fornecerá as variáveis de ambiente necessárias para o backend se conectar aos outros serviços.
+
+**`.env.example`**:
+```env
+# URL do nó agregador que recebe os dados
+CORE_URL=http://<IP_OU_HOSTNAME_DO_AGREGADOR>:8080
+
+# Detalhes de conexão do RabbitMQ
+RABBITMQ_HOST=<IP_OU_HOSTNAME_DO_RABBITMQ>
+RABBITMQ_PORT=5672
+RABBITMQ_USERNAME=guest
+RABBITMQ_PASSWORD=guest
+RABBITMQ_QUEUE=lotes_de_dados
 ```
 
-#### ▶️ Ative o ambiente virtual:
+### ▶️ Iniciando a Aplicação
 
-**Windows (CMD ou PowerShell):**
-
-```bash
-venv\Scripts\activate
-```
-
-**Linux/macOS:**
-
-```bash
-source venv/bin/activate
-```
-
-### 🔧 Instalar as dependências
-
-```bash
-pip install -r requirements.txt
-```
-
-> Se ainda não existir o `requirements.txt`, após instalar os pacotes com `pip install flask`, execute:
-
-```bash
-pip freeze > requirements.txt
-```
-
-### 🚀 Executar o back-end
-
-```bash
-python app.py
-```
-
----
-
-## 📦 Reinstalar dependências (após atualizações)
-
-Se outro membro do time adicionar novas bibliotecas, você pode atualizar desse jeito:
-
-```bash
-pip install -r requirements.txt
-```
-
----
-
-## 📁 Arquivos ignorados pelo Git
-
-O repositório ignora arquivos que não devem ser versionados:
-
-```
-# Arquivos comuns no .gitignore:
-
-# Angular
-node_modules/
-dist/
-
-# Python
-venv/
-__pycache__/
-*.pyc
-```
-
----
-
-## 🧑‍💻 Contribuição e Clonagem
-
-### Para clonar o repositório:
-
-```bash
-git clone https://github.com/SEU_USUARIO/NOME_DO_REPOSITORIO.git
-```
-
-Depois entre nas pastas:
-
-```bash
-cd front-end/     # ou cd back-end/
-```
-
----
-
-## ✅ O que o projeto faz
-
-- Interface para votação com Angular.
-- Envio de votos/dados para um servidor agregador (externo).
-- Comunicação por JSON via HTTP.
-- Simulação de um nó coletor do sistema distribuído.
-
----
-
-## ✍️ Observações Finais
-
-- O servidor central (Core) **não está incluído neste repositório**.
-- O foco aqui são os nós clientes.
-- Qualquer dúvida sobre execução, abra uma issue ou fale com o grupo.
-
----
-
-
-## 🚀 Como rodar com Docker
-
-### 📋 Pré-requisitos
-✅ Ter o [Docker Desktop](https://www.docker.com/products/docker-desktop/) instalado (Windows, Mac) **ou** o Docker Engine (Linux).  
-✅ Ter o [Docker Compose](https://docs.docker.com/compose/) disponível (vem embutido no Docker Desktop).
-
----
-
-### 🏗️ Buildar e rodar tudo (com rebuild completo)
-> Use quando você **alterou código** (no backend, frontend ou pseudo-core).
-
+Para construir as imagens e iniciar os containers, execute:
 ```bash
 ./start.sh
 ```
-
-Esse comando:
-✅ Rebuilda todas as imagens do zero, sem cache.  
-✅ Sobe os containers prontos pra uso.
-
----
-
-### ⚡ Rodar rápido (sem rebuild)
-> Use quando **não alterou código**, só quer subir os containers já existentes.
-
+Se você não fez alterações no código e só quer subir os containers, use a versão rápida:
 ```bash
 ./start-fast.sh
 ```
+### ⏹️ Parando a Aplicação
 
-Esse comando:
-✅ Usa as imagens já construídas.  
-✅ Só sobe os containers, mais rápido.
-
----
-
-### 🛑 Parar e remover tudo
-> Quando quiser derrubar tudo e limpar redes, volumes, etc.
-
+Para parar todos os containers e limpar os recursos, execute:
 ```bash
 ./stop.sh
 ```
 
----
+### 🌐 Acessos
 
-### 🌍 Acessos locais
-
-| Serviço        | Endereço                                |
-|---------------|----------------------------------------|
-| Frontend      | [http://localhost:4200](http://localhost:4200) |
-| Backend (API) | [http://localhost:5000](http://localhost:5000) |
-| Pseudo-core   | [http://localhost:5001](http://localhost:5001) |
+| Serviço    | Endereço Local                          |
+|------------|-----------------------------------------|
+| Frontend   | [http://localhost:4200](http://localhost:4200) |
+| Backend API| [http://localhost:5001](http://localhost:5001) |
 
 ---
 
-### 💡 Notas
+## ☸️ Desdobrando no Kubernetes (NÃO UTILIZAR - DESATUALIZADO)
 
-- Se estiver no Linux/macOS, lembre-se de dar permissão aos scripts:
+> 🛑 **AVISO:** Esta configuração está **desatualizada e não é funcional**. O backend atual **não se conecta** ao Kafka, que é o sistema de mensageria usado nesta configuração. Use esta seção apenas como referência para desenvolvimento futuro.
+
+### ⚠️ Motivo da Incompatibilidade
+A configuração do Kubernetes (`k8s/`) desdobra Zookeeper e Kafka. No entanto, a aplicação backend só possui código para se conectar ao RabbitMQ. Portanto, o envio de votos **falhará** neste desdobramento.
+
+### ✅ Pré-requisitos (para referência)
+- `kubectl` configurado para acessar seu cluster Kubernetes.
+- Permissão para criar `namespace`, `deployments`, e `services`.
+
+### ▶️ Desdobramento
+O script a seguir irá construir as imagens Docker locais e aplicar todos os manifestos do Kubernetes na ordem correta:
 ```bash
-chmod +x start.sh start-fast.sh stop.sh
+./deploy-k8s.sh
 ```
 
-- No Windows, use Git Bash, WSL ou PowerShell com Docker Desktop.
+### 🧹 Limpeza
+Para remover todos os recursos criados no cluster pelo script de desdobramento, execute:
+```bash
+./cleanup-k8s.sh
+```
+
+### 🌐 Acessando os Serviços no Kubernetes
+Após o desdobramento, você pode acessar os serviços usando `port-forward`:
+```bash
+# Para o Frontend
+kubectl port-forward -n voting-system service/frontend 4200:80
+
+# Para o Backend
+kubectl port-forward -n voting-system service/backend 5001:5001
+```
+
 ---
+
+*Este README foi gerado e atualizado para refletir o estado atual do projeto.*
