@@ -1,11 +1,25 @@
 FROM python:3.10-slim
 
 WORKDIR /app
-ENV PYTHONUNBUFFERED=1
 
+# Definir variáveis de ambiente
+ENV PYTHONUNBUFFERED=1
+ENV PYTHONDONTWRITEBYTECODE=1
+
+# Instalar dependências do sistema (se necessário)
+RUN apt-get update && apt-get install -y \
+    gcc \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copiar e instalar dependências Python
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
+# Copiar código da aplicação
 COPY . .
 
+# Expor a porta que a aplicação usa
+EXPOSE 5001
+
+# Comando para executar a aplicação com waitress e modo "unbuffered"
 CMD ["python", "-u", "app.py"]
