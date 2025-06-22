@@ -21,8 +21,35 @@ interface Resultado {
   votos: number;
 }
 
-interface Results {
+interface ResultadoIoT {
+  id: number;
+  nome: string;
+  votos: number;
+  media: number;
+  mediana: number;
+  contagem: number;
+  porcentagem: number;
+}
+
+interface TipoResultado {
+  titulo: string;
   resultados: Resultado[];
+  total: number;
+}
+
+interface TipoResultadoIoT {
+  titulo: string;
+  resultados: ResultadoIoT[];
+  total: number;
+}
+
+interface Results {
+  eleicao1: TipoResultado;
+  eleicao2: TipoResultado;
+  eleicao3: TipoResultado;
+  eleicao4: TipoResultado;
+  eleicao5: TipoResultado;
+  eleicao6: TipoResultadoIoT;
   eleicaoativa: boolean;
 }
 

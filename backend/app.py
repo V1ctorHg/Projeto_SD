@@ -369,46 +369,167 @@ def resultados():
         if resultados_cache["timestamp"] and agora - resultados_cache["timestamp"] < timedelta(seconds=CACHE_DURACAO):
             logger.info("Retornando resultados do cache.")
             return jsonify(resultados_cache["dados"])
+        
         logger.info("Buscando novos resultados do Aggregator Node...")
         response = requests.get(f"{AGGREGATOR_URL}/api/aggregator/results", timeout=10)
+        
         if response.status_code != 200:
-            logger.warning("Erro ao buscar resultados do agregador.")
-            return jsonify({"resultados": [], "eleicaoativa": False})
+            logger.warning(f"Erro ao buscar resultados do agregador. Status: {response.status_code}")
+            # Retorna dados vazios mas com estrutura correta
+            resposta_vazia = {
+                "eleicao1": {
+                    "titulo": "Eleição Atual",
+                    "resultados": [],
+                    "total": 0
+                },
+                "eleicao2": {
+                    "titulo": "Eleição Grupo 2", 
+                    "resultados": [],
+                    "total": 0
+                },
+                "eleicao3": {
+                    "titulo": "Melhor Pokemon",
+                    "resultados": [],
+                    "total": 0
+                },
+                "eleicaoativa": True
+            }
+            return jsonify(resposta_vazia)
+            
         dados_gerais = response.json()
         dados_agregados = dados_gerais.get("dadosAgregados", [])
 
-        dados_eleicao = None
-        for item in dados_agregados:
-            if item.get("type") == "eleicao":
-                dados_eleicao = item.get("lista", [])
-                break
-        
-        if not dados_eleicao:
-            return jsonify({"resultados": [], "eleicaoativa": True})
+        eleicao1_resultados = []
+        eleicao2_resultados = []
+        eleicao3_resultados = []
+        eleicao4_resultados = []
+        eleicao5_resultados = []
+        eleicao6_resultados = []
 
-        resultados_formatados = []
-        for resultado in dados_eleicao:
-            # O agregador retorna 'objectIdentifier' e 'somatorio'
-            # O frontend espera 'id', 'nome', e 'votos'
-            resultados_formatados.append({
-                "id": resultado.get("objectIdentifier"), 
-                "nome": resultado.get("objectIdentifier"), 
-                "votos": resultado.get("somatorio", 0)
-            })
+        for item in dados_agregados:
+            tipo = item.get("type")
+            lista_dados = item.get("lista", [])
+            
+            if tipo and lista_dados:
+                if tipo == "iot":
+                    # Estrutura especial para eleição iot com dados adicionais
+                    resultados_formatados = []
+                    for resultado in lista_dados:
+                        resultados_formatados.append({
+                            "id": resultado.get("objectIdentifier"), 
+                            "nome": resultado.get("objectIdentifier"), 
+                            "votos": resultado.get("somatorio", 0),
+                            "media": resultado.get("media", 0),
+                            "mediana": resultado.get("mediana", 0),
+                            "contagem": resultado.get("contagem", 0),
+                            "porcentagem": resultado.get("porcentagem", 0)
+                        })
+                    eleicao6_resultados = resultados_formatados
+                else:
+                    # Estrutura padrão para outras eleições (1-5)
+                    resultados_formatados = []
+                    for resultado in lista_dados:
+                        resultados_formatados.append({
+                            "id": resultado.get("objectIdentifier"), 
+                            "nome": resultado.get("objectIdentifier"), 
+                            "votos": resultado.get("somatorio", 0)
+                        })
+                    
+                    if tipo == "eleicao":
+                        eleicao1_resultados = resultados_formatados
+                    elif tipo == "eleicao-gp2":
+                        eleicao2_resultados = resultados_formatados
+                    elif tipo == "pokemon":
+                        eleicao3_resultados = resultados_formatados
+                    elif tipo == "votacao_melhor_ator":
+                        eleicao4_resultados = resultados_formatados
+                    elif tipo == "melhor-filme-2025":
+                        eleicao5_resultados = resultados_formatados
 
         resposta_final = {
-            "resultados": resultados_formatados,
-            "eleicaoativa": True # Assumindo que a eleição está sempre ativa
+            "eleicao1": {
+                "titulo": "Eleição Atual",
+                "resultados": eleicao1_resultados,
+                "total": sum(r["votos"] for r in eleicao1_resultados)
+            },
+            "eleicao2": {
+                "titulo": "Eleição Grupo 2", 
+                "resultados": eleicao2_resultados,
+                "total": sum(r["votos"] for r in eleicao2_resultados)
+            },
+            "eleicao3": {
+                "titulo": "Melhor Pokemon",
+                "resultados": eleicao3_resultados,
+                "total": sum(r["votos"] for r in eleicao3_resultados)
+            },
+            "eleicao4": {
+                "titulo": "Melhor Ator",
+                "resultados": eleicao4_resultados,
+                "total": sum(r["votos"] for r in eleicao4_resultados)
+            },
+            "eleicao5": {
+                "titulo": "Melhor Filme 2025",
+                "resultados": eleicao5_resultados,
+                "total": sum(r["votos"] for r in eleicao5_resultados)
+            },
+            "eleicao6": {
+                "titulo": "IoT - Dados Estatísticos",
+                "resultados": eleicao6_resultados,
+                "total": sum(r["votos"] for r in eleicao6_resultados)
+            },
+            "eleicaoativa": True
         }
 
         resultados_cache["dados"] = resposta_final
         resultados_cache["timestamp"] = agora
         
+        logger.info(f"Resultados processados: {len(eleicao1_resultados)} eleicao1, {len(eleicao2_resultados)} eleicao2, {len(eleicao3_resultados)} eleicao3")
         return jsonify(resposta_final)
 
+    except requests.exceptions.Timeout:
+        logger.error("Timeout ao buscar resultados do agregador")
+        # Retorna dados vazios mas com estrutura correta
+        resposta_vazia = {
+            "eleicao1": {
+                "titulo": "Eleição Atual",
+                "resultados": [],
+                "total": 0
+            },
+            "eleicao2": {
+                "titulo": "Eleição Grupo 2", 
+                "resultados": [],
+                "total": 0
+            },
+            "eleicao3": {
+                "titulo": "Melhor Pokemon",
+                "resultados": [],
+                "total": 0
+            },
+            "eleicaoativa": True
+        }
+        return jsonify(resposta_vazia)
     except Exception as e:
         logger.error(f"Erro ao buscar resultados: {str(e)}")
-        return jsonify({"resultados": [], "eleicaoativa": False})
+        # Retorna dados vazios mas com estrutura correta
+        resposta_vazia = {
+            "eleicao1": {
+                "titulo": "Eleição Atual",
+                "resultados": [],
+                "total": 0
+            },
+            "eleicao2": {
+                "titulo": "Eleição Grupo 2", 
+                "resultados": [],
+                "total": 0
+            },
+            "eleicao3": {
+                "titulo": "Melhor Pokemon",
+                "resultados": [],
+                "total": 0
+            },
+            "eleicaoativa": True
+        }
+        return jsonify(resposta_vazia)
 
 @app.route('/electionalternative', methods=['POST'])
 def electionalternative():
@@ -437,16 +558,32 @@ def get_candidatos():
 @app.route('/health', methods=['GET'])
 def health():
     try:
+        # Verifica conexão com RabbitMQ
         if fila.ch and fila.ch.is_open:
             rabbitmq_status = "connected"
         else:
             rabbitmq_status = "disconnected"
 
-        response = requests.get(f"{AGGREGATOR_URL}/actuator/health", timeout=5)
+        # Verifica conexão com o agregador
+        try:
+            response = requests.get(f"{AGGREGATOR_URL}/actuator/health", timeout=5)
+            aggregator_status = "connected" if response.status_code == 200 else "disconnected"
+        except:
+            aggregator_status = "disconnected"
+
+        # Verifica se consegue buscar resultados
+        try:
+            response = requests.get(f"{AGGREGATOR_URL}/api/aggregator/results", timeout=5)
+            results_status = "accessible" if response.status_code == 200 else "inaccessible"
+        except:
+            results_status = "inaccessible"
+
         return jsonify({
             "status": "healthy",
             "rabbitmq": rabbitmq_status,
-            "aggregator_node": "connected" if response.status_code == 200 else "disconnected"
+            "aggregator_node": aggregator_status,
+            "results_endpoint": results_status,
+            "cache_status": "active" if resultados_cache["timestamp"] else "empty"
         })
     except Exception as e:
         return jsonify({

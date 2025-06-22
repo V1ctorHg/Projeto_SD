@@ -1,39 +1,104 @@
 <div class="results-container">
-  <h2>Resultados da Votação</h2>
+  <h2>Resultados das Eleições</h2>
   
   <div *ngIf="!loading && !error" class="status-badge" 
        [ngClass]="{'active': electionResults.eleicaoativa, 'finished': !electionResults.eleicaoativa}">
-    {{ electionResults.eleicaoativa ? 'Eleição Ativa - Votos em Processamento' : 'Eleição Finalizada - Votos Processados' }}
+    {{ electionResults.eleicaoativa ? 'Eleições Ativas - Votos em Processamento' : 'Eleições Finalizadas - Votos Processados' }}
   </div>
 
   <div *ngIf="loading" class="loading">
+    <div class="loading-spinner"></div>
     Carregando resultados...
   </div>
 
   <div *ngIf="!loading && error" class="error-message">
+    <div class="error-icon">⚠️</div>
     {{ error }}
+    <button (click)="retryLoad()" class="retry-button">Tentar Novamente</button>
   </div>
 
-  <div *ngIf="!loading && !error">
-    <div *ngIf="Object.keys(electionResults).length === 0" class="no-results">
-      Nenhum resultado disponível no momento.
+  <div *ngIf="!loading && !error" class="total-overview">
+    <div class="total-item">
+      <span class="total-label">Total Geral de Votos:</span>
+      <span class="total-value">{{ getTotalGeral() }}</span>
     </div>
+  </div>
 
-    <div class="total-votes">
-      Total de votos: {{ calculateTotalVotes() }}
+  <!-- Seção das eleições normais (1-5) -->
+  <div *ngIf="!loading && !error" class="results-grid">
+    <div *ngFor="let eleicao of getEleicoes()" 
+         class="result-section"
+         [ngClass]="{'primary-election': eleicao.key === 'eleicao1'}">
+      <div class="section-header">
+        <h3>{{ eleicao.data.titulo }}</h3>
+        <div class="section-total">
+          Total: {{ eleicao.data.total }}
+        </div>
+      </div>
+
+      <div *ngIf="eleicao.data.resultados.length === 0" class="no-results">
+        Nenhum resultado disponível para {{ eleicao.data.titulo.toLowerCase() }}.
+      </div>
+
+      <div *ngIf="eleicao.data.resultados.length > 0" class="results-list">
+        <div *ngFor="let candidate of sortedResults(eleicao.data.resultados)" class="candidate-result">
+          <div class="candidate-info">
+            <span class="candidate-name">{{ candidate.nome }}</span>
+            <span class="candidate-votes">{{ candidate.votos }} votos</span>
+          </div>
+          <div class="progress-bar">
+            <div class="progress" [style.width.%]="calculatePercentage(candidate.votos, eleicao.data.total)"></div>
+          </div>
+          <div class="percentage">
+            {{ calculatePercentage(candidate.votos, eleicao.data.total) }}%
+          </div>
+        </div>
+      </div>
     </div>
+  </div>
 
-    <div class="results-list">
-      <div *ngFor="let candidate of sortedResults()" class="candidate-result">
-        <div class="candidate-info">
-          <span class="candidate-name">{{ candidate.nome }}</span>
-          <span class="candidate-votes">{{ candidate.votos }} votos</span>
+  <!-- Seção separada para eleição IoT -->
+  <div *ngIf="!loading && !error && getEleicaoIoT().resultados.length > 0" class="iot-section">
+    <div class="iot-header">
+      <h3>📊 {{ getEleicaoIoT().titulo }}</h3>
+      <div class="iot-total">
+        Total: {{ getEleicaoIoT().total }}
+      </div>
+    </div>
+    
+    <div class="iot-results-grid">
+      <div *ngFor="let candidate of sortedResultsIoT(getEleicaoIoT().resultados)" class="iot-candidate-card">
+        <div class="iot-candidate-header">
+          <span class="iot-candidate-name">{{ candidate.nome }}</span>
+          <span class="iot-candidate-votes">{{ candidate.votos }} votos</span>
         </div>
-        <div class="progress-bar">
-          <div class="progress" [style.width.%]="calculatePercentage(candidate.votos)"></div>
+        
+        <div class="iot-stats-grid">
+          <div class="iot-stat">
+            <span class="iot-stat-label">Média</span>
+            <span class="iot-stat-value">{{ candidate.media | number:'1.2-2' }}</span>
+          </div>
+          <div class="iot-stat">
+            <span class="iot-stat-label">Mediana</span>
+            <span class="iot-stat-value">{{ candidate.mediana | number:'1.0-0' }}</span>
+          </div>
+          <div class="iot-stat">
+            <span class="iot-stat-label">Contagem</span>
+            <span class="iot-stat-value">{{ candidate.contagem }}</span>
+          </div>
+          <div class="iot-stat">
+            <span class="iot-stat-label">Porcentagem</span>
+            <span class="iot-stat-value">{{ candidate.porcentagem | number:'1.2-2' }}%</span>
+          </div>
         </div>
-        <div class="percentage">
-          {{ calculatePercentage(candidate.votos) }}%
+        
+        <div class="iot-progress-section">
+          <div class="progress-bar">
+            <div class="progress iot-progress" [style.width.%]="calculatePercentage(candidate.votos, getEleicaoIoT().total)"></div>
+          </div>
+          <div class="percentage">
+            {{ calculatePercentage(candidate.votos, getEleicaoIoT().total) }}%
+          </div>
         </div>
       </div>
     </div>

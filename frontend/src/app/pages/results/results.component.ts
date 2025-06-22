@@ -10,8 +10,35 @@ interface Resultado {
   votos: number;
 }
 
-interface Results {
+interface ResultadoIoT {
+  id: number;
+  nome: string;
+  votos: number;
+  media: number;
+  mediana: number;
+  contagem: number;
+  porcentagem: number;
+}
+
+interface TipoResultado {
+  titulo: string;
   resultados: Resultado[];
+  total: number;
+}
+
+interface TipoResultadoIoT {
+  titulo: string;
+  resultados: ResultadoIoT[];
+  total: number;
+}
+
+interface Results {
+  eleicao1: TipoResultado;
+  eleicao2: TipoResultado;
+  eleicao3: TipoResultado;
+  eleicao4: TipoResultado;
+  eleicao5: TipoResultado;
+  eleicao6: TipoResultadoIoT;
   eleicaoativa: boolean;
 }
 
@@ -23,8 +50,15 @@ interface Results {
   styleUrls: ['./results.component.css']
 })
 export class ResultsComponent implements OnInit, OnDestroy {
-  resultados: Resultado[] = [];
-  electionResults: Results = { resultados: [], eleicaoativa: true };
+  electionResults: Results = {
+    eleicao1: { titulo: "Eleição Atual", resultados: [], total: 0 },
+    eleicao2: { titulo: "Eleição Grupo 2", resultados: [], total: 0 },
+    eleicao3: { titulo: "Melhor Pokemon", resultados: [], total: 0 },
+    eleicao4: { titulo: "Melhor Ator", resultados: [], total: 0 },
+    eleicao5: { titulo: "Melhor Filme 2025", resultados: [], total: 0 },
+    eleicao6: { titulo: "IoT - Dados Estatísticos", resultados: [], total: 0 },
+    eleicaoativa: true
+  };
   loading = true;
   error: string | null = null;
   private pollingSubscription: any;
@@ -52,7 +86,6 @@ export class ResultsComponent implements OnInit, OnDestroy {
     ).subscribe({
       next: (results) => {
         this.electionResults = results;
-        this.resultados = results.resultados;
         this.loading = false;
       },
       error: (err) => {
@@ -67,7 +100,6 @@ export class ResultsComponent implements OnInit, OnDestroy {
     this.apiService.getResults().subscribe({
       next: (results) => {
         this.electionResults = results;
-        this.resultados = results.resultados;
         this.loading = false;
       },
       error: (err) => {
@@ -85,17 +117,43 @@ export class ResultsComponent implements OnInit, OnDestroy {
     }
   }
 
-  sortedResults(): Resultado[] {
-    return [...this.resultados].sort((a, b) => b.votos - a.votos);
+  sortedResults(resultados: Resultado[]): Resultado[] {
+    return [...resultados].sort((a, b) => b.votos - a.votos);
   }
 
-  calculateTotalVotes(): number {
-    return this.resultados.reduce((sum, candidate) => sum + candidate.votos, 0);
+  sortedResultsIoT(resultados: ResultadoIoT[]): ResultadoIoT[] {
+    return [...resultados].sort((a, b) => b.votos - a.votos);
   }
 
-  calculatePercentage(votos: number): number {
-    const total = this.calculateTotalVotes();
+  calculatePercentage(votos: number, total: number): number {
     if (total === 0) return 0;
     return Math.round((votos / total) * 100 * 100) / 100;
+  }
+
+  getEleicoes(): { key: string, data: TipoResultado }[] {
+    return [
+      { key: 'eleicao1', data: this.electionResults.eleicao1 },
+      { key: 'eleicao2', data: this.electionResults.eleicao2 },
+      { key: 'eleicao3', data: this.electionResults.eleicao3 },
+      { key: 'eleicao4', data: this.electionResults.eleicao4 },
+      { key: 'eleicao5', data: this.electionResults.eleicao5 }
+    ];
+  }
+
+  getEleicaoIoT(): TipoResultadoIoT {
+    return this.electionResults.eleicao6;
+  }
+
+  getTotalGeral(): number {
+    return this.electionResults.eleicao1.total + 
+           this.electionResults.eleicao2.total + 
+           this.electionResults.eleicao3.total +
+           this.electionResults.eleicao4.total +
+           this.electionResults.eleicao5.total +
+           this.electionResults.eleicao6.total;
+  }
+
+  retryLoad() {
+    this.fetchResults();
   }
 }
