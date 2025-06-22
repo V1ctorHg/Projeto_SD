@@ -372,164 +372,91 @@ def resultados():
         
         logger.info("Buscando novos resultados do Aggregator Node...")
         response = requests.get(f"{AGGREGATOR_URL}/api/aggregator/results", timeout=10)
-        
+
         if response.status_code != 200:
-            logger.warning(f"Erro ao buscar resultados do agregador. Status: {response.status_code}")
-            # Retorna dados vazios mas com estrutura correta
-            resposta_vazia = {
-                "eleicao1": {
-                    "titulo": "Eleição Atual",
-                    "resultados": [],
-                    "total": 0
-                },
-                "eleicao2": {
-                    "titulo": "Eleição Grupo 2", 
-                    "resultados": [],
-                    "total": 0
-                },
-                "eleicao3": {
-                    "titulo": "Melhor Pokemon",
-                    "resultados": [],
-                    "total": 0
-                },
-                "eleicaoativa": True
-            }
-            return jsonify(resposta_vazia)
-            
-        dados_gerais = response.json()
+            logger.warning(f"Erro ao buscar resultados do agregador. Status: {response.status_code}, Body: {response.text}")
+            return jsonify(gerar_resposta_vazia_estruturada())
+        
+        try:
+            dados_gerais = response.json()
+            if not dados_gerais:
+                logger.warning("Resposta JSON vazia do agregador.")
+                return jsonify(gerar_resposta_vazia_estruturada())
+        except json.JSONDecodeError:
+            logger.error("Falha ao decodificar JSON do agregador.")
+            return jsonify(gerar_resposta_vazia_estruturada())
+
         dados_agregados = dados_gerais.get("dadosAgregados", [])
 
-        eleicao1_resultados = []
-        eleicao2_resultados = []
-        eleicao3_resultados = []
-        eleicao4_resultados = []
-        eleicao5_resultados = []
-        eleicao6_resultados = []
+        eleicao1_resultados, eleicao2_resultados, eleicao3_resultados, eleicao4_resultados, eleicao5_resultados, eleicao6_resultados = [], [], [], [], [], []
 
         for item in dados_agregados:
             tipo = item.get("type")
             lista_dados = item.get("lista", [])
             
-            if tipo and lista_dados:
-                if tipo == "iot":
-                    # Estrutura especial para eleição iot com dados adicionais
-                    resultados_formatados = []
-                    for resultado in lista_dados:
-                        resultados_formatados.append({
-                            "id": resultado.get("objectIdentifier"), 
-                            "nome": resultado.get("objectIdentifier"), 
-                            "votos": resultado.get("somatorio", 0),
-                            "media": resultado.get("media", 0),
-                            "mediana": resultado.get("mediana", 0),
-                            "contagem": resultado.get("contagem", 0),
-                            "porcentagem": resultado.get("porcentagem", 0)
-                        })
-                    eleicao6_resultados = resultados_formatados
-                else:
-                    # Estrutura padrão para outras eleições (1-5)
-                    resultados_formatados = []
-                    for resultado in lista_dados:
-                        resultados_formatados.append({
-                            "id": resultado.get("objectIdentifier"), 
-                            "nome": resultado.get("objectIdentifier"), 
-                            "votos": resultado.get("somatorio", 0)
-                        })
-                    
-                    if tipo == "eleicao":
-                        eleicao1_resultados = resultados_formatados
-                    elif tipo == "eleicao-gp2":
-                        eleicao2_resultados = resultados_formatados
-                    elif tipo == "pokemon":
-                        eleicao3_resultados = resultados_formatados
-                    elif tipo == "votacao_melhor_ator":
-                        eleicao4_resultados = resultados_formatados
-                    elif tipo == "melhor-filme-2025":
-                        eleicao5_resultados = resultados_formatados
+            if not tipo or not isinstance(lista_dados, list):
+                continue
+
+            if tipo == "iot":
+                resultados_formatados = [
+                    {
+                        "id": r.get("objectIdentifier"), "nome": r.get("objectIdentifier"), 
+                        "votos": r.get("somatorio", 0), "media": r.get("media", 0),
+                        "mediana": r.get("mediana", 0), "contagem": r.get("contagem", 0),
+                        "porcentagem": r.get("porcentagem", 0)
+                    } for r in lista_dados
+                ]
+                eleicao6_resultados = resultados_formatados
+            else:
+                resultados_formatados = [
+                    {"id": r.get("objectIdentifier"), "nome": r.get("objectIdentifier"), "votos": r.get("somatorio", 0)}
+                    for r in lista_dados
+                ]
+                
+                if tipo == "eleicao": eleicao1_resultados = resultados_formatados
+                elif tipo == "eleicao-gp2": eleicao2_resultados = resultados_formatados
+                elif tipo == "pokemon": eleicao3_resultados = resultados_formatados
+                elif tipo == "votacao_melhor_ator": eleicao4_resultados = resultados_formatados
+                elif tipo == "melhor-filme-2025": eleicao5_resultados = resultados_formatados
 
         resposta_final = {
-            "eleicao1": {
-                "titulo": "Eleição Atual",
-                "resultados": eleicao1_resultados,
-                "total": sum(r["votos"] for r in eleicao1_resultados)
-            },
-            "eleicao2": {
-                "titulo": "Eleição Grupo 2", 
-                "resultados": eleicao2_resultados,
-                "total": sum(r["votos"] for r in eleicao2_resultados)
-            },
-            "eleicao3": {
-                "titulo": "Melhor Pokemon",
-                "resultados": eleicao3_resultados,
-                "total": sum(r["votos"] for r in eleicao3_resultados)
-            },
-            "eleicao4": {
-                "titulo": "Melhor Ator",
-                "resultados": eleicao4_resultados,
-                "total": sum(r["votos"] for r in eleicao4_resultados)
-            },
-            "eleicao5": {
-                "titulo": "Melhor Filme 2025",
-                "resultados": eleicao5_resultados,
-                "total": sum(r["votos"] for r in eleicao5_resultados)
-            },
-            "eleicao6": {
-                "titulo": "IoT - Dados Estatísticos",
-                "resultados": eleicao6_resultados,
-                "total": sum(r["votos"] for r in eleicao6_resultados)
-            },
+            "eleicao1": {"titulo": "Eleição Atual", "resultados": eleicao1_resultados, "total": sum(r["votos"] for r in eleicao1_resultados)},
+            "eleicao2": {"titulo": "Eleição Grupo 2", "resultados": eleicao2_resultados, "total": sum(r["votos"] for r in eleicao2_resultados)},
+            "eleicao3": {"titulo": "Melhor Pokemon", "resultados": eleicao3_resultados, "total": sum(r["votos"] for r in eleicao3_resultados)},
+            "eleicao4": {"titulo": "Melhor Ator", "resultados": eleicao4_resultados, "total": sum(r["votos"] for r in eleicao4_resultados)},
+            "eleicao5": {"titulo": "Melhor Filme 2025", "resultados": eleicao5_resultados, "total": sum(r["votos"] for r in eleicao5_resultados)},
+            "eleicao6": {"titulo": "IoT - Dados Estatísticos", "resultados": eleicao6_resultados, "total": sum(r.get("votos", r.get("contagem", 0)) for r in eleicao6_resultados)},
             "eleicaoativa": True
         }
 
-        resultados_cache["dados"] = resposta_final
-        resultados_cache["timestamp"] = agora
+        # Cache inteligente: só armazena se houver dados.
+        if any(resposta_final[f'eleicao{i}']['resultados'] for i in range(1, 7)):
+            resultados_cache["dados"] = resposta_final
+            resultados_cache["timestamp"] = agora
+            logger.info("Resultados válidos armazenados no cache.")
+        else:
+            logger.info("Resultados vazios. Cache não foi atualizado.")
         
-        logger.info(f"Resultados processados: {len(eleicao1_resultados)} eleicao1, {len(eleicao2_resultados)} eleicao2, {len(eleicao3_resultados)} eleicao3")
         return jsonify(resposta_final)
 
-    except requests.exceptions.Timeout:
-        logger.error("Timeout ao buscar resultados do agregador")
-        # Retorna dados vazios mas com estrutura correta
-        resposta_vazia = {
-            "eleicao1": {
-                "titulo": "Eleição Atual",
-                "resultados": [],
-                "total": 0
-            },
-            "eleicao2": {
-                "titulo": "Eleição Grupo 2", 
-                "resultados": [],
-                "total": 0
-            },
-            "eleicao3": {
-                "titulo": "Melhor Pokemon",
-                "resultados": [],
-                "total": 0
-            },
-            "eleicaoativa": True
-        }
-        return jsonify(resposta_vazia)
+    except requests.exceptions.RequestException as e:
+        logger.error(f"Erro de conexão ao buscar resultados: {e}")
+        return jsonify(gerar_resposta_vazia_estruturada())
     except Exception as e:
-        logger.error(f"Erro ao buscar resultados: {str(e)}")
-        # Retorna dados vazios mas com estrutura correta
-        resposta_vazia = {
-            "eleicao1": {
-                "titulo": "Eleição Atual",
-                "resultados": [],
-                "total": 0
-            },
-            "eleicao2": {
-                "titulo": "Eleição Grupo 2", 
-                "resultados": [],
-                "total": 0
-            },
-            "eleicao3": {
-                "titulo": "Melhor Pokemon",
-                "resultados": [],
-                "total": 0
-            },
-            "eleicaoativa": True
-        }
-        return jsonify(resposta_vazia)
+        logger.error(f"Erro inesperado ao buscar resultados: {str(e)}")
+        return jsonify(gerar_resposta_vazia_estruturada())
+
+def gerar_resposta_vazia_estruturada():
+    """Gera uma resposta com a estrutura completa e resultados vazios."""
+    return {
+        "eleicao1": {"titulo": "Eleição Atual", "resultados": [], "total": 0},
+        "eleicao2": {"titulo": "Eleição Grupo 2", "resultados": [], "total": 0},
+        "eleicao3": {"titulo": "Melhor Pokemon", "resultados": [], "total": 0},
+        "eleicao4": {"titulo": "Melhor Ator", "resultados": [], "total": 0},
+        "eleicao5": {"titulo": "Melhor Filme 2025", "resultados": [], "total": 0},
+        "eleicao6": {"titulo": "IoT - Dados Estatísticos", "resultados": [], "total": 0},
+        "eleicaoativa": True
+    }
 
 @app.route('/electionalternative', methods=['POST'])
 def electionalternative():
