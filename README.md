@@ -8,7 +8,7 @@ Bem-vindo! Este é um sistema de votação completo, conteinerizado com Docker. 
 -   **Backend Robusto:** API em Python (Flask) para processar os votos.
 -   **Pronto para a Nuvem:** Integra-se com serviços de mensageria (RabbitMQ) e um nó agregador externo.
 -   **Acesso na Rede Local:** Permite acesso de qualquer dispositivo na sua rede.
--   **Fácil de Rodar:** Scripts prontos para iniciar e parar a aplicação com um único comando.
+-   **Setup Simplificado:** Funciona "out-of-the-box" sem configurações adicionais.
 
 ---
 
@@ -47,35 +47,9 @@ Você só precisa de uma ferramenta instalada:
 
 ## 🚀 Guia de Execução Passo a Passo
 
-Siga estes passos para rodar a aplicação.
+A aplicação está **pré-configurada** e pronta para funcionar imediatamente! Não é necessário criar arquivos de configuração adicionais.
 
-### Passo 1: Crie o Arquivo de Configuração (Obrigatório)
-
-**Antes de tudo, você precisa configurar as variáveis de ambiente.** A aplicação depende de um arquivo `.env` na raiz do projeto para se conectar aos serviços de nuvem.
-
-1.  Crie um arquivo chamado `.env` na pasta principal do projeto.
-2.  Copie e cole o conteúdo abaixo dentro do arquivo `.env` que você acabou de criar.
-
-```env
-# Credenciais para o serviço de mensageria RabbitMQ (CloudAMQP)
-RABBITMQ_HOST=chimpanzee.rmq.cloudamqp.com
-RABBITMQ_PORT=5671
-RABBITMQ_USERNAME=edxgujmk
-RABBITMQ_PASSWORD=Wm1vy2ea99LIfZh-ZZyl3DhWlLDlNcdH
-RABBITMQ_VIRTUAL_HOST=edxgujmk
-
-# Fila padrão para publicação dos votos
-RABBITMQ_QUEUE=lotes_de_dados
-
-# Endereço do serviço que agrega e consolida os resultados
-CORE_URL=https://agregador-node.onrender.com
-```
-
-> ⚠️ **Atenção:** A aplicação **não funcionará** sem este arquivo `.env` devidamente preenchido.
-
-### Passo 2: Inicie a Aplicação com os Scripts
-
-Com o arquivo `.env` criado, agora você pode usar os scripts para gerenciar os contêineres.
+### Passo 1: Inicie a Aplicação com os Scripts
 
 -   **Para a primeira execução ou para aplicar mudanças no código:**
     *Este comando reconstrói as imagens do Docker, garantindo que tudo esteja atualizado.*
@@ -89,12 +63,12 @@ Com o arquivo `.env` criado, agora você pode usar os scripts para gerenciar os 
     ./start-fast.sh
     ```
 
-### Passo 3: Acesse a Aplicação
+### Passo 2: Acesse a Aplicação
 Após iniciar os contêineres, espere alguns instantes e acesse a interface no seu navegador:
 
 -   **Endereço:** [**http://localhost:4200**](http://localhost:4200)
 
-### Passo 4: Pare a Aplicação
+### Passo 3: Pare a Aplicação
 Para parar todos os contêineres e limpar os recursos, use o comando:
 ```bash
 ./stop.sh
@@ -115,8 +89,7 @@ Para parar todos os contêineres e limpar os recursos, use o comando:
 │   ├── src/            # Código-fonte do Angular
 │   └── dockerfile      # Define a imagem Docker do frontend
 │
-├── docker-compose.yml  # Orquestra os serviços de backend e frontend
-├── .env                # (Você DEVE criar este arquivo) Credenciais
+├── docker-compose.yml  # Orquestra os serviços (com variáveis de ambiente incluídas)
 ├── start.sh            # Script para CONSTRUIR e iniciar os contêineres
 ├── start-fast.sh       # Script para INICIAR contêineres já construídos
 └── stop.sh             # Script para PARAR e limpar os contêineres

@@ -15,8 +15,15 @@ RUN apt-get update && apt-get install -y \
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copiar código da aplicação
+# Copiar arquivos de configuração e dados essenciais PRIMEIRO
+# Isso garante que eles estejam presentes e invalida o cache se eles mudarem.
+COPY candidatos.json .
+
+# Copiar o resto do código da aplicação
 COPY . .
+
+# VERIFICAÇÃO: Listar arquivos no diretório de trabalho para depuração
+RUN ls -l .
 
 # Expor a porta que a aplicação usa
 EXPOSE 5001

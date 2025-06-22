@@ -30,6 +30,19 @@ services:
     container_name: voting-backend
     ports:
       - "5001:5001"
+    environment:
+      # Credenciais para o serviço de mensageria RabbitMQ (CloudAMQP)
+      RABBITMQ_HOST: chimpanzee.rmq.cloudamqp.com
+      RABBITMQ_PORT: 5671
+      RABBITMQ_USERNAME: edxgujmk
+      RABBITMQ_PASSWORD: Wm1vy2ea99LIfZh-ZZyl3DhWlLDlNcdH
+      RABBITMQ_VIRTUAL_HOST: edxgujmk
+      
+      # Fila padrão para publicação dos votos
+      RABBITMQ_QUEUE: lotes_de_dados
+      
+      # Endereço do serviço que agrega e consolida os resultados
+      CORE_URL: https://agregador-node.onrender.com
     extra_hosts:
       - "host.docker.internal:host-gateway"
     networks:
