@@ -30,6 +30,9 @@ services:
     container_name: voting-backend
     ports:
       - "5001:5001"
+    volumes:
+      #pasta que persiste dados mesmo entre execuçoes do container, salvar CPF
+      - ./backend/data:/app/data
     environment:
       # Credenciais para o serviço de mensageria RabbitMQ (CloudAMQP)
       RABBITMQ_HOST: chimpanzee.rmq.cloudamqp.com

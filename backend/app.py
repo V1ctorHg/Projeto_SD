@@ -185,21 +185,55 @@ def enviar_resultados(resultados):
 @app.route('/votar', methods=['POST'])
 def votar():
     try:
-        dados = request.json
+        dados = request.get_json()
+        cpf = dados.get('cpf')
         candidato = dados.get('candidato_id')
         tipo = 'eleicao'
+
         if not candidato:
             return jsonify({"erro": "Candidato não informado"}), 400
+
+        if not cpf or not candidato:
+            return jsonify({"erro": "CPF e candidato_id são obrigatórios"}), 400
+
+        # Limpa o CPF de caracteres não numéricos
+        cpf = ''.join(filter(str.isdigit, str(cpf)))
+
+        # Caminho do arquivo persistente
+        arquivo_cpfs = os.path.join(os.path.dirname(__file__), 'data', 'cpfs_votantes.json')
+
+
+        # Garante que o arquivo exista e leia os dados
+        if not os.path.exists(arquivo_cpfs):
+            with open(arquivo_cpfs, 'w') as f:
+                json.dump([], f)
+
+        with open(arquivo_cpfs, 'r') as f:
+            try:
+                cpfs_votantes = json.load(f)
+            except json.JSONDecodeError:
+                cpfs_votantes = []
+
+        if cpf in cpfs_votantes:
+            return jsonify({"erro": "CPF já votou"}), 403
+
         if not candidato_existe(candidato):
             return jsonify({"erro": "Candidato inválido"}), 400
+
+        # Gera e envia o voto
         lote = gerar_lote(tipo, candidato)
         if rabbitmq_manager.enviar_mensagem(lote):
+            cpfs_votantes.append(cpf)
+            with open(arquivo_cpfs, 'w') as f:
+                json.dump(cpfs_votantes, f)
             return jsonify({"status": "Voto enviado com sucesso"}), 200
         else:
             return jsonify({"erro": "Erro ao enviar para o RabbitMQ"}), 500
+
     except Exception as e:
         logger.error(f"Erro ao processar voto: {str(e)}")
         return jsonify({"erro": "Erro interno"}), 500
+
 
 @app.route('/resultados', methods=['GET'])
 def resultados():
