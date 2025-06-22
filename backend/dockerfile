@@ -15,9 +15,7 @@ RUN apt-get update && apt-get install -y \
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copiar arquivos de configuração e dados essenciais PRIMEIRO
-# Isso garante que eles estejam presentes e invalida o cache se eles mudarem.
-COPY candidatos.json .
+
 
 # Copiar o resto do código da aplicação
 COPY . .

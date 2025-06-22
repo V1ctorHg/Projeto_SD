@@ -12,6 +12,8 @@ import uuid
 import pika
 import os
 import ssl
+import atexit
+import time
 
 app = Flask(__name__)
 CORS(app)
@@ -46,87 +48,204 @@ logger.info(f"AGGREGATOR_URL: {AGGREGATOR_URL}")
 logger.info(f"===============================")
 
 CACHE_DURACAO = 30
-CANDIDATOS_PATH = "candidatos.json"
+CANDIDATOS_PATH = os.path.join(os.path.dirname(__file__), 'data', 'candidatos.json')
+MAX_BATCH = 30
+INTERVALO_ENVIO = 20
+PENDENTES_PATH = os.path.join(os.path.dirname(__file__), 'data', 'lotes_pendentes.json')
+ARQUIVO_LOCK = threading.Lock()
+INTERVALO_REENVIO = 60
 
-class RabbitMQManager:
+class FilaRabbit:
     def __init__(self):
-        self.connection = None
-        self.channel = None
-        self._connect()  # Conecta na inicialização
+        self.conn = None
+        self.ch = None
+        self._conectar()
 
-    def _connect(self):
-        """
-        Estabelece a conexão e o canal com o RabbitMQ.
-        Este método é privado e deve ser chamado internamente.
-        """
+    def _conectar(self):
+        if self.conn and self.conn.is_open:
+            return
         try:
-            if self.connection and self.connection.is_open:
-                return  # Já estamos conectados
-
-            logger.info("Tentando conectar ao RabbitMQ...")
-            credentials = pika.PlainCredentials(RABBITMQ_USERNAME, RABBITMQ_PASSWORD)
-            ssl_context = ssl.create_default_context()
-            parameters = pika.ConnectionParameters(
+            logger.info("🔌 Conectando ao RabbitMQ...")
+            cred = pika.PlainCredentials(RABBITMQ_USERNAME, RABBITMQ_PASSWORD)
+            ssl_ctx = ssl.create_default_context()
+            params = pika.ConnectionParameters(
                 host=RABBITMQ_HOST,
                 port=RABBITMQ_PORT,
                 virtual_host=RABBITMQ_VIRTUAL_HOST,
-                credentials=credentials,
-                ssl_options=pika.SSLOptions(ssl_context),
-                heartbeat=300, # Heartbeat para manter a conexão viva
+                credentials=cred,
+                ssl_options=pika.SSLOptions(ssl_ctx),
+                heartbeat=300,
                 blocked_connection_timeout=150
             )
-
-            self.connection = pika.BlockingConnection(parameters)
-            self.channel = self.connection.channel()
-            self.channel.queue_declare(queue=RABBITMQ_QUEUE, durable=True)
-            logger.info("✅ Conectado ao RabbitMQ com sucesso!")
-
+            self.conn = pika.BlockingConnection(params)
+            self.ch = self.conn.channel()
+            self.ch.queue_declare(queue=RABBITMQ_QUEUE, durable=True)
+            logger.info("✅ Conectado com sucesso!")
         except Exception as e:
-            logger.error(f"❌ Falha catastrófica ao conectar ao RabbitMQ: {e}")
-            self.connection = None
-            self.channel = None
+            logger.error(f"💥 Erro na conexão: {e}")
+            self.conn = None
+            self.ch = None
 
-    def _ensure_connection(self):
-        """Garante que a conexão está ativa antes de uma operação."""
-        if not self.connection or not self.connection.is_open or not self.channel or not self.channel.is_open:
-            logger.warning("Conexão com RabbitMQ perdida. Tentando reconectar...")
-            self._connect()
+    def _checar_conexao(self):
+        if not self.conn or not self.conn.is_open or not self.ch or not self.ch.is_open:
+            logger.warning("⚠️ Conexão perdida. Tentando reconectar...")
+            self._conectar()
 
-    def enviar_mensagem(self, mensagem):
-        """
-        Envia uma mensagem para a fila, com tentativas de reconexão.
-        """
-        self._ensure_connection()
-        
-        if not self.channel:
-            logger.error("❌ Não foi possível enviar mensagem: canal indisponível após tentativa de reconexão.")
+    def mandar(self, pacote):
+        self._checar_conexao()
+        if not self.ch:
+            logger.error("❌ Canal indisponível. Mensagem não enviada.")
             return False
-
         try:
-            mensagem_json = json.dumps(mensagem)
-            self.channel.basic_publish(
+            corpo = json.dumps(pacote)
+            self.ch.basic_publish(
                 exchange='',
                 routing_key=RABBITMQ_QUEUE,
-                body=mensagem_json,
+                body=corpo,
                 properties=pika.BasicProperties(delivery_mode=2)
             )
-            logger.info(f"📤 Mensagem enviada para RabbitMQ: {mensagem['batchId']}")
+            logger.info(f"📨 Lote enviado: {pacote['batchId']}")
             return True
         except Exception as e:
-            logger.error(f"❌ Erro ao enviar mensagem: {e}. A conexão pode ter sido perdida.")
-            # A próxima chamada irá tentar reconectar através do _ensure_connection
-            self.connection = None # Força a reconexão na próxima chamada
-            self.channel = None
+            logger.error(f"❌ Erro no envio: {e}")
+            self.conn = None
+            self.ch = None
             return False
 
-    def close(self):
-        """Fecha a conexão de forma limpa."""
-        if self.connection and self.connection.is_open:
-            logger.info("Fechando conexão com RabbitMQ...")
-            self.connection.close()
+    def fechar(self):
+        if self.conn and self.conn.is_open:
+            logger.info("Encerrando conexão com RabbitMQ...")
+            self.conn.close()
 
-# Instância única para ser usada por toda a aplicação
-rabbitmq_manager = RabbitMQManager()
+class EnviadorLote:
+    def __init__(self, fila, tamanho_max, intervalo):
+        self.fila = fila
+        self.tamanho_max = tamanho_max
+        self.intervalo = intervalo
+        self.buffer = []
+        self.lock = threading.RLock()
+        self.timer = None
+        self._agendar()
+
+    def _agendar(self):
+        self.timer = threading.Timer(self.intervalo, self.enviar)
+        self.timer.daemon = True
+        self.timer.start()
+
+    def adicionar(self, item):
+        with self.lock:
+            self.buffer.append(item)
+            if len(self.buffer) >= self.tamanho_max:
+                logger.info(f"🔄 Lote cheio ({self.tamanho_max}). Enviando...")
+                self.enviar(por_tamanho=True)
+
+    def enviar(self, por_tamanho=False):
+        with self.lock:
+            if self.timer:
+                self.timer.cancel()
+            if not self.buffer:
+                self._agendar()
+                return
+            dados = list(self.buffer)
+            self.buffer.clear()
+            self._agendar()
+
+        pacote = {
+            "batchId": f"BATCH_{uuid.uuid4().hex[:12]}",
+            "sourceNodeId": "GRUPO_1",
+            "dataPoints": dados
+        }
+
+        origem = "tamanho" if por_tamanho else "tempo"
+        if self.fila.mandar(pacote):
+            logger.info(f"📤 {len(dados)} itens enviados ({origem})")
+        else:
+            logger.error(f"❌ Falha no envio. {len(dados)} itens serão persistidos.")
+            self.persistir_lote(pacote)
+
+    def persistir_lote(self, pacote):
+        with ARQUIVO_LOCK:
+            try:
+                with open(PENDENTES_PATH, 'r') as f:
+                    pendentes = json.load(f)
+            except FileNotFoundError:
+                logger.warning(f"Arquivo {PENDENTES_PATH} não existe. Criando novo.")
+                pendentes = []
+            except json.JSONDecodeError:
+                logger.warning(f"Erro ao ler JSON em {PENDENTES_PATH}. Sobrescrevendo.")
+                pendentes = []
+
+            pendentes.append(pacote)
+
+            with open(PENDENTES_PATH, 'w') as f:
+                json.dump(pendentes, f, indent=4)
+
+            logger.info(f"Lote {pacote['batchId']} salvo para reenvio futuro.")
+
+    def desligar(self):
+        logger.info("Finalizando EnviadorLote. Enviando o restante...")
+        with self.lock:
+            if self.timer:
+                self.timer.cancel()
+            if self.buffer:
+                pacote = {
+                    "batchId": f"SHUTDOWN_{uuid.uuid4().hex[:12]}",
+                    "sourceNodeId": "GRUPO_1",
+                    "dataPoints": list(self.buffer)
+                }
+                self.fila.mandar(pacote)
+                logger.info(f"📤 Lote final com {len(self.buffer)} itens enviado.")
+
+class Reenviador:
+    def __init__(self, fila, caminho_arquivo, lock, intervalo):
+        self.fila = fila
+        self.caminho_arquivo = caminho_arquivo
+        self.lock = lock
+        self.intervalo = intervalo
+
+    def rodar(self):
+        logger.info(f"🔄 Reenviador de lotes pendentes iniciado. Verificando a cada {self.intervalo}s.")
+        while True:
+            time.sleep(self.intervalo)
+            
+            lotes_pendentes = []
+            with self.lock:
+                try:
+                    if not os.path.exists(self.caminho_arquivo) or os.path.getsize(self.caminho_arquivo) == 0:
+                        continue
+                    with open(self.caminho_arquivo, 'r') as f:
+                        lotes_pendentes = json.load(f)
+                    if not isinstance(lotes_pendentes, list) or not lotes_pendentes:
+                        continue
+                except (FileNotFoundError, json.JSONDecodeError):
+                    continue
+                
+                logger.info(f"🔄 Verificando {len(lotes_pendentes)} lotes pendentes...")
+                
+                lotes_enviados = []
+                for lote in lotes_pendentes:
+                    if self.fila.mandar(lote):
+                        logger.info(f"📤 Lote pendente {lote.get('batchId', 'N/A')} reenviado com sucesso!")
+                        lotes_enviados.append(lote)
+                
+                if lotes_enviados:
+                    lotes_restantes = [l for l in lotes_pendentes if l not in lotes_enviados]
+                    with open(self.caminho_arquivo, 'w') as f:
+                        json.dump(lotes_restantes, f, indent=4)
+                    
+                    if not lotes_restantes:
+                        logger.info("✅ Fila de lotes pendentes foi limpa com sucesso.")
+                    else:
+                        logger.info(f"{len(lotes_restantes)} lotes restantes aguardam a próxima tentativa.")
+
+fila = FilaRabbit()
+lote = EnviadorLote(fila, MAX_BATCH, INTERVALO_ENVIO)
+atexit.register(lote.desligar)
+
+# Inicia o reenviador em uma thread separada
+reenviador = Reenviador(fila, PENDENTES_PATH, ARQUIVO_LOCK, INTERVALO_REENVIO)
+thread_reenvio = threading.Thread(target=reenviador.rodar, daemon=True)
+thread_reenvio.start()
 
 def carregar_candidatos():
     try:
@@ -140,18 +259,12 @@ def candidato_existe(candidato_id):
     candidatos = carregar_candidatos()
     return any(c["id"] == candidato_id for c in candidatos)
 
-def gerar_lote(tipo, candidato_nome):
+def criar_voto(tipo, candidato_nome):
     return {
-        "batchId": f"VOTO_{uuid.uuid4().hex[:8]}",
-        "sourceNodeId": "GRUPO_1",
-        "dataPoints": [
-            {
-                "type": tipo,
-                "objectIdentifier": candidato_nome,
-                "valor": 1,
-                "eventDatetime": datetime.now().isoformat()
-            }
-        ]
+        "type": tipo,
+        "objectIdentifier": candidato_nome,
+        "valor": 1,
+        "eventDatetime": datetime.now().isoformat()
     }
 
 resultados_cache = {
@@ -170,17 +283,16 @@ def processar_eleicao(data):
 
 def enviar_resultados(resultados):
     total_enviados = 0
+    total_itens_adicionados = 0
     for cidade in resultados:
         votos_por_partido = cidade.get("votos_por_partido", {})
         for partido, votos in votos_por_partido.items():
             for _ in range(votos):
-                lote = gerar_lote("eleicao", partido)
-                if rabbitmq_manager.enviar_mensagem(lote):
-                    total_enviados += 1
-                else:
-                    logger.error(f"[SIMULAÇÃO] Falha ao enviar voto para {partido}")
-            logger.info(f"[SIMULAÇÃO] Enviados {votos} votos para {partido}")
-    logger.info(f"[SIMULAÇÃO] Total de votos enviados: {total_enviados}")
+                voto = criar_voto("eleicao", partido)
+                lote.adicionar(voto)
+                total_itens_adicionados += 1
+            logger.info(f"[SIMULAÇÃO] Adicionados {votos} votos para {partido} ao lote.")
+    logger.info(f"[SIMULAÇÃO] Total de {total_itens_adicionados} votos adicionados ao processador de lotes.")
 
 @app.route('/votar', methods=['POST'])
 def votar():
@@ -220,15 +332,16 @@ def votar():
         if not candidato_existe(candidato):
             return jsonify({"erro": "Candidato inválido"}), 400
 
-        # Gera e envia o voto
-        lote = gerar_lote(tipo, candidato)
-        if rabbitmq_manager.enviar_mensagem(lote):
-            cpfs_votantes.append(cpf)
-            with open(arquivo_cpfs, 'w') as f:
-                json.dump(cpfs_votantes, f)
-            return jsonify({"status": "Voto enviado com sucesso"}), 200
-        else:
-            return jsonify({"erro": "Erro ao enviar para o RabbitMQ"}), 500
+        # Adiciona o voto ao processador de lotes
+        voto = criar_voto(tipo, candidato)
+        lote.adicionar(voto)
+        
+        # Persiste o CPF localmente
+        cpfs_votantes.append(cpf)
+        with open(arquivo_cpfs, 'w') as f:
+            json.dump(cpfs_votantes, f)
+        
+        return jsonify({"status": "Voto recebido e agendado para envio em lote."}), 200
 
     except Exception as e:
         logger.error(f"Erro ao processar voto: {str(e)}")
@@ -310,9 +423,7 @@ def get_candidatos():
 @app.route('/health', methods=['GET'])
 def health():
     try:
-        # rabbitmq = get_rabbitmq_manager() # Não é mais necessário
-        # Uma forma simples de checar a saúde é garantir que o canal está aberto
-        if rabbitmq_manager.channel and rabbitmq_manager.channel.is_open:
+        if fila.ch and fila.ch.is_open:
             rabbitmq_status = "connected"
         else:
             rabbitmq_status = "disconnected"
@@ -335,9 +446,7 @@ def index():
 
 if __name__ == "__main__":
     print("INICIANDO SCRIPT app.py")
-    # A instância do RabbitMQManager já é criada e tenta se conectar na inicialização.
-    # Não precisamos chamar get_rabbitmq_manager() aqui.
-    if rabbitmq_manager.channel:
+    if fila.ch:
         logger.info("Backend iniciado com conexão ao RabbitMQ estabelecida.")
     else:
         logger.warning("Backend iniciado, mas sem conexão com RabbitMQ. Tentativas de reconexão ocorrerão.")
