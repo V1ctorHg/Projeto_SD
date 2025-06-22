@@ -1,8 +1,11 @@
 #!/bin/bash
 
 echo "Rebuildando tudo sem cache..."
-docker-compose --env-file .env build --no-cache
+docker-compose build --no-cache
 
 echo "Subindo containers..."
-docker-compose --env-file .env up -d
+docker-compose up -d
+
+echo "Containers em execução!"
+docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
 

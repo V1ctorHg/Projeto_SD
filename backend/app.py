@@ -166,21 +166,11 @@ class EnviadorLote:
     def persistir_lote(self, pacote):
         with ARQUIVO_LOCK:
             try:
-                with open(PENDENTES_PATH, 'r') as f:
-                    pendentes = json.load(f)
-            except FileNotFoundError:
-                logger.warning(f"Arquivo {PENDENTES_PATH} não existe. Criando novo.")
-                pendentes = []
-            except json.JSONDecodeError:
-                logger.warning(f"Erro ao ler JSON em {PENDENTES_PATH}. Sobrescrevendo.")
-                pendentes = []
-
-            pendentes.append(pacote)
-
-            with open(PENDENTES_PATH, 'w') as f:
-                json.dump(pendentes, f, indent=4)
-
-            logger.info(f"Lote {pacote['batchId']} salvo para reenvio futuro.")
+                with open(PENDENTES_PATH, 'a') as f:
+                    f.write(json.dumps(pacote) + '\n')
+                logger.info(f"💾 Lote {pacote['batchId']} salvo para reenvio futuro.")
+            except Exception as e:
+                logger.error(f"CRÍTICO: Não foi possível persistir o lote no disco: {e}")
 
     def desligar(self):
         logger.info("Finalizando EnviadorLote. Enviando o restante...")
@@ -193,8 +183,11 @@ class EnviadorLote:
                     "sourceNodeId": "GRUPO_1",
                     "dataPoints": list(self.buffer)
                 }
-                self.fila.mandar(pacote)
-                logger.info(f"📤 Lote final com {len(self.buffer)} itens enviado.")
+                if self.fila.mandar(pacote):
+                    logger.info(f"📤 Lote final com {len(self.buffer)} itens enviado.")
+                else:
+                    logger.error(f"❌ Falha no envio do lote final. {len(self.buffer)} itens serão persistidos.")
+                    self.persistir_lote(pacote)
 
 class Reenviador:
     def __init__(self, fila, caminho_arquivo, lock, intervalo):
@@ -204,39 +197,59 @@ class Reenviador:
         self.intervalo = intervalo
 
     def rodar(self):
-        logger.info(f"🔄 Reenviador de lotes pendentes iniciado. Verificando a cada {self.intervalo}s.")
+        logger.info(f"🔄 Reenviador ativo. Verificando pendências a cada {self.intervalo}s.")
         while True:
             time.sleep(self.intervalo)
-            
-            lotes_pendentes = []
+
+            try:
+                if not os.path.exists(self.caminho_arquivo):
+                    continue
+                if os.path.getsize(self.caminho_arquivo) == 0:
+                    continue
+            except OSError as e:
+                logger.warning(f"⚠️ Erro ao acessar o arquivo de pendências: {e}")
+                continue
+
+            lotes = []
             with self.lock:
                 try:
-                    if not os.path.exists(self.caminho_arquivo) or os.path.getsize(self.caminho_arquivo) == 0:
-                        continue
                     with open(self.caminho_arquivo, 'r') as f:
-                        lotes_pendentes = json.load(f)
-                    if not isinstance(lotes_pendentes, list) or not lotes_pendentes:
-                        continue
-                except (FileNotFoundError, json.JSONDecodeError):
+                        for linha in f:
+                            linha = linha.strip()
+                            if linha:
+                                lotes.append(json.loads(linha))
+                    # Limpa o arquivo depois de carregar os lotes
+                    open(self.caminho_arquivo, 'w').close()
+                except Exception as e:
+                    logger.error(f"💥 Falha ao ler ou limpar {self.caminho_arquivo}: {e}")
                     continue
-                
-                logger.info(f"🔄 Verificando {len(lotes_pendentes)} lotes pendentes...")
-                
-                lotes_enviados = []
-                for lote in lotes_pendentes:
-                    if self.fila.mandar(lote):
-                        logger.info(f"📤 Lote pendente {lote.get('batchId', 'N/A')} reenviado com sucesso!")
-                        lotes_enviados.append(lote)
-                
-                if lotes_enviados:
-                    lotes_restantes = [l for l in lotes_pendentes if l not in lotes_enviados]
-                    with open(self.caminho_arquivo, 'w') as f:
-                        json.dump(lotes_restantes, f, indent=4)
-                    
-                    if not lotes_restantes:
-                        logger.info("✅ Fila de lotes pendentes foi limpa com sucesso.")
-                    else:
-                        logger.info(f"{len(lotes_restantes)} lotes restantes aguardam a próxima tentativa.")
+
+            if not lotes:
+                continue
+
+            logger.info(f"🔁 Tentando reenviar {len(lotes)} lote(s)...")
+
+            falhas = []
+            for lote in lotes:
+                id_lote = lote.get('batchId', 'SEM_ID')
+                if not self.fila.mandar(lote):
+                    logger.warning(f"❌ Falha ao reenviar lote {id_lote}.")
+                    falhas.append(lote)
+                else:
+                    logger.info(f"📤 Lote {id_lote} reenviado com sucesso.")
+
+            if falhas:
+                with self.lock:
+                    try:
+                        with open(self.caminho_arquivo, 'a') as f:
+                            for lote in falhas:
+                                f.write(json.dumps(lote) + '\n')
+                        logger.warning(f"{len(falhas)} lote(s) devolvidos para a fila de pendências.")
+                    except Exception as e:
+                        logger.error(f"💥 Erro ao tentar reescrever pendências: {e}")
+            else:
+                logger.info("✅ Todos os lotes foram reenviados com sucesso.")
+
 
 fila = FilaRabbit()
 lote = EnviadorLote(fila, MAX_BATCH, INTERVALO_ENVIO)
@@ -332,14 +345,15 @@ def votar():
         if not candidato_existe(candidato):
             return jsonify({"erro": "Candidato inválido"}), 400
 
-        # Adiciona o voto ao processador de lotes
-        voto = criar_voto(tipo, candidato)
-        lote.adicionar(voto)
-        
-        # Persiste o CPF localmente
+        # Persiste o CPF localmente PRIMEIRO para garantir que não haja votos duplicados.
+        # No pior caso (crash após esta linha), um voto é perdido, mas a integridade é mantida.
         cpfs_votantes.append(cpf)
         with open(arquivo_cpfs, 'w') as f:
             json.dump(cpfs_votantes, f)
+        
+        # Adiciona o voto ao processador de lotes
+        voto = criar_voto(tipo, candidato)
+        lote.adicionar(voto)
         
         return jsonify({"status": "Voto recebido e agendado para envio em lote."}), 200
 
