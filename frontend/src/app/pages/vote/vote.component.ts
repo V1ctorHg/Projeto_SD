@@ -158,4 +158,22 @@ export class VoteComponent implements OnInit {
       }
     });
   }
+
+  // Métodos de navegação
+  goToDashboard() {
+    this.router.navigate(['/dashboard']);
+  }
+
+  goToResults() {
+    this.router.navigate(['/results']);
+  }
+
+  goToElectionAlternative() {
+    this.router.navigate(['/electionalternative']);
+  }
+
+  logout() {
+    this.apiService.logout();
+    this.router.navigate(['/login']);
+  }
 }

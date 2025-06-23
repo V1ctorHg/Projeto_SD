@@ -1,5 +1,13 @@
 <div class="results-container">
-  <h2>Resultados das Eleições</h2>
+  <div class="page-header">
+    <h2>Resultados das Eleições</h2>
+    <div class="nav-buttons">
+      <button class="nav-button" (click)="goToDashboard()">Dashboard</button>
+      <button class="nav-button" (click)="goToVote()">Votar</button>
+      <button class="nav-button" (click)="goToElectionAlternative()">Eleição Alternativa</button>
+      <button class="logout-button" (click)="logout()">Sair</button>
+    </div>
+  </div>
   
   <div *ngIf="!loading && !error" class="status-badge" 
        [ngClass]="{'active': electionResults.eleicaoativa, 'finished': !electionResults.eleicaoativa}">

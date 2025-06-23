@@ -1,0 +1,33 @@
+<div class="dashboard-container">
+  <div class="dashboard-header">
+    <h1>Sistema de Votação</h1>
+    <div class="user-section">
+      <span class="welcome-text">Bem-vindo, {{ username }}!</span>
+      <button class="logout-button" (click)="logout()">Sair</button>
+    </div>
+  </div>
+
+  <div class="dashboard-content">
+    <h2>Selecione uma opção:</h2>
+    
+    <div class="options-grid">
+      <div class="option-card" (click)="navigateToVote()">
+        <div class="option-icon">🗳️</div>
+        <h3>Votar</h3>
+        <p>Realizar votação nos candidatos disponíveis</p>
+      </div>
+
+      <div class="option-card" (click)="navigateToResults()">
+        <div class="option-icon">📊</div>
+        <h3>Consultar Resultados</h3>
+        <p>Visualizar resultados das eleições em tempo real</p>
+      </div>
+
+      <div class="option-card" (click)="navigateToElectionAlternative()">
+        <div class="option-icon">⚙️</div>
+        <h3>Eleição Alternativa</h3>
+        <p>Configurar e executar simulações de eleição</p>
+      </div>
+    </div>
+  </div>
+</div> 

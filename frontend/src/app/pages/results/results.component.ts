@@ -1,6 +1,7 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ApiService } from '../../services/api.service';
+import { Router } from '@angular/router';
 import { timer } from 'rxjs';
 import { switchMap } from 'rxjs/operators';
 
@@ -66,7 +67,7 @@ export class ResultsComponent implements OnInit, OnDestroy {
 
   protected readonly Object = Object;
 
-  constructor(private apiService: ApiService) {}
+  constructor(private apiService: ApiService, private router: Router) {}
 
   ngOnInit() {
     this.startPolling();
@@ -155,5 +156,23 @@ export class ResultsComponent implements OnInit, OnDestroy {
 
   retryLoad() {
     this.fetchResults();
+  }
+
+  // Métodos de navegação
+  goToDashboard() {
+    this.router.navigate(['/dashboard']);
+  }
+
+  goToVote() {
+    this.router.navigate(['/vote']);
+  }
+
+  goToElectionAlternative() {
+    this.router.navigate(['/electionalternative']);
+  }
+
+  logout() {
+    this.apiService.logout();
+    this.router.navigate(['/login']);
   }
 }

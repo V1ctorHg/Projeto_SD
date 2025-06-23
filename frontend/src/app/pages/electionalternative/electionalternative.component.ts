@@ -109,4 +109,22 @@ export class ElectionAlternativeComponent implements OnInit {
       }
     });
   }
+
+  // Métodos de navegação
+  goToDashboard() {
+    this.router.navigate(['/dashboard']);
+  }
+
+  goToVote() {
+    this.router.navigate(['/vote']);
+  }
+
+  goToResults() {
+    this.router.navigate(['/results']);
+  }
+
+  logout() {
+    this.apiService.logout();
+    this.router.navigate(['/login']);
+  }
 }

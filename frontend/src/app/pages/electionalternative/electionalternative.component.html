@@ -1,5 +1,13 @@
 <div class="election-alternative-container">
-  <h2>Inicie a votação</h2>
+  <div class="page-header">
+    <h2>Inicie a votação</h2>
+    <div class="nav-buttons">
+      <button class="nav-button" (click)="goToDashboard()">Dashboard</button>
+      <button class="nav-button" (click)="goToVote()">Votar</button>
+      <button class="nav-button" (click)="goToResults()">Resultados</button>
+      <button class="logout-button" (click)="logout()">Sair</button>
+    </div>
+  </div>
 
   <p>Insira as informações abaixo para iniciar a votação</p>
   <!--depois colocar aqui o usuário que solicitou a eleição e o timestamp-->

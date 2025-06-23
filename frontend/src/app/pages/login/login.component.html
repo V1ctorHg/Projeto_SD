@@ -1,0 +1,55 @@
+<div class="login-container">
+  <div class="login-card">
+    <div class="login-header">
+      <h1>Sistema de Votação</h1>
+      <p>Faça login para acessar o sistema</p>
+    </div>
+
+    <form (ngSubmit)="onSubmit()" class="login-form">
+      <div class="form-group">
+        <label for="username">Usuário:</label>
+        <input 
+          type="text" 
+          id="username" 
+          name="username" 
+          [(ngModel)]="username" 
+          placeholder="Digite seu usuário"
+          required
+          [disabled]="loading"
+        >
+      </div>
+
+      <div class="form-group">
+        <label for="password">Senha:</label>
+        <input 
+          type="password" 
+          id="password" 
+          name="password" 
+          [(ngModel)]="password" 
+          placeholder="Digite sua senha"
+          required
+          [disabled]="loading"
+        >
+      </div>
+
+      <div class="error-message" *ngIf="error">
+        {{ error }}
+      </div>
+
+      <button 
+        type="submit" 
+        class="login-button" 
+        [disabled]="loading"
+      >
+        <span *ngIf="!loading">Entrar</span>
+        <span *ngIf="loading">Entrando...</span>
+      </button>
+    </form>
+
+    <div class="login-info">
+      <p><strong>Credenciais padrão:</strong></p>
+      <p>Usuário: <code>admin</code></p>
+      <p>Senha: <code>admin</code></p>
+    </div>
+  </div>
+</div> 

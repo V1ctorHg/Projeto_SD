@@ -1,5 +1,6 @@
 from flask import Flask, jsonify, request
 from flask_cors import CORS
+from flask_jwt_extended import JWTManager, create_access_token, jwt_required, get_jwt_identity
 import waitress
 import requests
 import threading
@@ -14,9 +15,15 @@ import os
 import ssl
 import atexit
 import time
+from config import ADMIN_USERNAME, ADMIN_PASSWORD, JWT_SECRET_KEY, JWT_ACCESS_TOKEN_EXPIRES
 
 app = Flask(__name__)
 CORS(app)
+
+# Configuração JWT
+app.config['JWT_SECRET_KEY'] = JWT_SECRET_KEY
+app.config['JWT_ACCESS_TOKEN_EXPIRES'] = timedelta(seconds=JWT_ACCESS_TOKEN_EXPIRES)
+jwt = JWTManager(app)
 
 # Configuração do logging
 logging.basicConfig(
@@ -307,7 +314,53 @@ def enviar_resultados(resultados):
             logger.info(f"[SIMULAÇÃO] Adicionados {votos} votos para {partido} ao lote.")
     logger.info(f"[SIMULAÇÃO] Total de {total_itens_adicionados} votos adicionados ao processador de lotes.")
 
+@app.route('/')
+def index():
+    return jsonify({"message": "API de votação rodando!"})
+
+# === ROTAS DE AUTENTICAÇÃO ===
+
+@app.route('/login', methods=['POST'])
+def login():
+    try:
+        data = request.get_json()
+        username = data.get('username')
+        password = data.get('password')
+        
+        if not username or not password:
+            return jsonify({"erro": "Usuário e senha são obrigatórios"}), 400
+        
+        if username == ADMIN_USERNAME and password == ADMIN_PASSWORD:
+            access_token = create_access_token(identity=username)
+            return jsonify({
+                "message": "Login realizado com sucesso",
+                "access_token": access_token,
+                "username": username
+            }), 200
+        else:
+            return jsonify({"erro": "Credenciais inválidas"}), 401
+            
+    except Exception as e:
+        logger.error(f"Erro no login: {str(e)}")
+        return jsonify({"erro": "Erro interno no servidor"}), 500
+
+@app.route('/verify-token', methods=['GET'])
+@jwt_required()
+def verify_token():
+    try:
+        current_user = get_jwt_identity()
+        return jsonify({
+            "valid": True,
+            "username": current_user
+        }), 200
+    except Exception as e:
+        logger.error(f"Erro na verificação do token: {str(e)}")
+        return jsonify({"erro": "Token inválido"}), 401
+
+# === PROTEGER ROTAS EXISTENTES ===
+
 @app.route('/votar', methods=['POST'])
+@jwt_required()
 def votar():
     try:
         dados = request.get_json()
@@ -363,6 +416,7 @@ def votar():
 
 
 @app.route('/resultados', methods=['GET'])
+@jwt_required()
 def resultados():
     try:
         agora = datetime.now()
@@ -459,6 +513,7 @@ def gerar_resposta_vazia_estruturada():
     }
 
 @app.route('/electionalternative', methods=['POST'])
+@jwt_required()
 def electionalternative():
     try:
         data = request.json
@@ -471,6 +526,7 @@ def electionalternative():
 
 
 @app.route('/candidatos', methods=['GET'])
+@jwt_required()
 def get_candidatos():
     try:
         candidatos = carregar_candidatos()
@@ -517,10 +573,6 @@ def health():
             "status": "unhealthy",
             "error": str(e)
         }), 500
-
-@app.route('/')
-def index():
-    return jsonify({"message": "API de votação rodando!"})
 
 if __name__ == "__main__":
     print("INICIANDO SCRIPT app.py")
