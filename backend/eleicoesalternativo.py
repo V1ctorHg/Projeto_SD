@@ -249,29 +249,30 @@ class eleicao:
             cidade_atual = nomes_cidades[i]
             simulador = eleicao(pop, partidos, [cidade_atual])
             
-            # Simula votação
-            votos_cidade = simulador.simular_votos(taxa_comparecimento)
+            # Simula os votos federais
+            votos_federais = simulador.simular_votos(taxa_comparecimento)
             
-            # Calcula resultados da cidade
-            total_votos_cidade = votos_cidade.sum()
+            # Formata os resultados da cidade
+            votos_por_partido = {partidos[j]: int(votos_federais[j]) for j in range(num_partidos)}
+            total_votos_cidade = sum(votos_federais)
+            
+            # Encontra o vencedor
             if total_votos_cidade > 0:
-                vencedor_idx = int(np.argmax(votos_cidade))
-                vencedor_cidade = partidos[vencedor_idx]
-                porcentagem_vencedor = round((votos_cidade[vencedor_idx] / total_votos_cidade) * 100, 2)
-                
-                # Cria dicionário de votos por partido na cidade
-                votos_partidos_cidade = {partido: int(votos) for partido, votos in zip(partidos, votos_cidade)}
-                
-                resultados_cidades.append({
-                    'nome': cidade_atual,
-                    'populacao': pop,
-                    'total_votos': int(total_votos_cidade),
-                    'vencedor': vencedor_cidade,
-                    'porcentagem_vencedor': porcentagem_vencedor,
-                    'votos_por_partido': votos_partidos_cidade,
-                    'totalpossiveiseleitores': populacao_total
-                })
-        
-        
-            
+                idx_vencedor = np.argmax(votos_federais)
+                vencedor = partidos[idx_vencedor]
+                porcentagem_vencedor = round((votos_federais[idx_vencedor] / total_votos_cidade) * 100, 2)
+            else:
+                vencedor = "N/A"
+                porcentagem_vencedor = 0
+
+            # Adiciona os resultados à lista
+            resultados_cidades.append({
+                "nome": cidade_atual,
+                "populacao": pop,
+                "total_votos": int(total_votos_cidade),
+                "vencedor": vencedor,
+                "porcentagem_vencedor": porcentagem_vencedor,
+                "votos_por_partido": votos_por_partido
+            })
+
         return resultados_cidades

@@ -153,9 +153,9 @@ export class ApiService {
     }, { headers: this.getAuthHeaders() });
   }
 
-  getElectionAlternative(population: number, votes: number): Observable<CreateElection> {
-    return this.http.post<CreateElection>(`${this.apiUrl}${this.endpoints.electionalternative}`, 
-      { population, votes }, 
+  startElectionAlternative(data: { populacao_total: number, num_cidades: number }): Observable<CreateElection> {
+    return this.http.post<CreateElection>(`${this.apiUrl}/electionalternative`,
+      data,
       { headers: this.getAuthHeaders() }
     );
   }

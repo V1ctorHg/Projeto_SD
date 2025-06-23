@@ -53,13 +53,19 @@ export class ElectionAlternativeComponent implements OnInit {
   }
 
   startElection() {
+    this.loading = true;
+    this.error = null;
+    this.success = null;
+
     if (this.populacao_total <= 0) {
-      this.message = 'Erro: A população total deve ser maior que zero.';
+      this.error = 'A população total deve ser maior que zero.';
+      this.loading = false;
       return;
     }
 
     if (this.num_cidades <= 0) {
-      this.message = 'Erro: O número de cidades deve ser maior que zero.';
+      this.error = 'O número de cidades deve ser maior que zero.';
+      this.loading = false;
       return;
     }
 
@@ -68,43 +74,17 @@ export class ElectionAlternativeComponent implements OnInit {
       num_cidades: this.num_cidades,
     };
 
-    this.electionService.startElection(dados).subscribe({
+    this.apiService.startElectionAlternative(dados).subscribe({
       next: (response: any) => {
-        this.message = 'Simulação iniciada com sucesso! - Veja o resultado na aba "Consultar"';
-      },
-      error: (error) => {
-        this.message = 'Erro ao iniciar a simulação: ' + error.message;
-      }
-    });
-  }
-
-  submitElection() {
-    if (!this.population || !this.votes) {
-      this.error = 'Por favor, preencha todos os campos.';
-      return;
-    }
-
-    if (this.votes > this.population) {
-      this.error = 'O número de votos não pode ser maior que a população.';
-      return;
-    }
-
-    this.loading = true;
-    this.error = null;
-    this.success = null;
-
-    this.apiService.getElectionAlternative(this.population, this.votes).subscribe({
-      next: (response) => {
-        this.success = response.message;
+        this.success = response.message || 'Simulação iniciada com sucesso! Os resultados podem levar um minuto para aparecer.';
         this.loading = false;
-        // Redirecionar para resultados após 2 segundos
         setTimeout(() => {
           this.router.navigate(['/results']);
         }, 2000);
       },
-      error: (err) => {
-        console.error('Erro ao criar eleição alternativa:', err);
-        this.error = 'Erro ao criar eleição alternativa. Por favor, tente novamente.';
+      error: (err: any) => {
+        console.error('Erro ao iniciar a simulação:', err);
+        this.error = err.error?.message || 'Erro ao iniciar a simulação. Verifique o console para mais detalhes.';
         this.loading = false;
       }
     });
